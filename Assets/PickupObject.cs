@@ -158,16 +158,16 @@ public class PickupObject : MonoBehaviour
         if (Physics.Raycast(ray, out hit, maxDistance))
         {
             var p = hit.collider.GetComponent<Pickupable>();
-            if (p != null)
+            var g = hit.collider.GetComponent<ResourceGenerator>();
+            if (p != null) carriedObject = p.gameObject;
+            if (g != null)
             {
-                carriedObject = p.gameObject;
-                var g = hit.collider.GetComponent<ResourceGenerator>();
-                if (g != null)
-                {
-                    if (!g.TakeOne()) return;
-                    carriedObject = Instantiate(g.generatedObject, carriedObject.transform.position, carriedObject.transform.rotation) as GameObject;
-                    if (g.removeIfNone && g.ShouldDisappear()) Destroy(hit.collider.gameObject);
-                }
+                if (!g.TakeOne()) return;
+                carriedObject = Instantiate(g.generatedObject, g.gameObject.transform.position, g.gameObject.transform.rotation) as GameObject;
+                if (g.removeIfNone && g.ShouldDisappear()) Destroy(hit.collider.gameObject);
+            }
+            if (p != null || g != null)
+            {
                 carrying = true;
                 carriedObject.GetComponent<Rigidbody>().isKinematic = true;
                 carriedObject.GetComponent<Collider>().isTrigger = true;
@@ -191,7 +191,6 @@ public class PickupObject : MonoBehaviour
             pos.y += (float)(0.1 - bound.min.y);
             carriedObject.transform.position = pos;
         }
-        //carriedObject.transform.rotation = Quaternion.Euler(0, player.transform.rotation.eulerAngles.y, 0);
     }
     void PositionSnap(GameObject obj)
     {
