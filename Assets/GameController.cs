@@ -5,6 +5,7 @@ public class GameController : MonoBehaviour {
     public GameObject player;
     public Camera playerCamera;
     public Camera birdViewCamera;
+    public Canvas playerViewCanvas;
     bool playerView;
 	void Start () {
         playerView = true;
@@ -26,6 +27,7 @@ public class GameController : MonoBehaviour {
             birdViewCamera.transform.position = new Vector3(player.transform.position.x, birdViewCamera.transform.position.y, player.transform.position.z);
             player.SetActive(false);
             birdViewCamera.GetComponent<BirdViewCameraController>().enabled = true;
+            playerViewCanvas.enabled = false;
         }
         else
         {
@@ -33,6 +35,7 @@ public class GameController : MonoBehaviour {
             birdViewCamera.GetComponent<BirdViewCameraController>().enabled = false;
             playerCamera.enabled = true;
             player.SetActive(true);
+            playerViewCanvas.enabled = true;
         }
         playerView = !playerView;
     }

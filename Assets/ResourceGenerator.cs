@@ -15,6 +15,7 @@ public class ResourceGenerator : MonoBehaviour {
     }
     public void UpdateText()
     {
+        if (remainCount == null) return;
         if (unlimited) remainCount.text = "\u221E";
         else remainCount.text = remain.ToString();
     }

@@ -19,5 +19,9 @@ public class BirdViewCameraController : MonoBehaviour {
         {
             GetComponent<Camera>().orthographicSize -= Input.GetAxis("Size");
         }
+        if (Mathf.Abs(Input.GetAxis("Mouse ScrollWheel")) > 0.01 && GetComponent<Camera>().orthographicSize - Input.GetAxis("Mouse ScrollWheel") > 1)
+        {
+            GetComponent<Camera>().orthographicSize -= Input.GetAxis("Mouse ScrollWheel");
+        }
     }
 }
