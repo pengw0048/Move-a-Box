@@ -214,10 +214,11 @@ public class PickupObject : MonoBehaviour
     }
     void HandleTransform()
     {
-        if (transformSnapMode == TransformSnapMode.On && Input.GetButtonDown("Size") || transformSnapMode == TransformSnapMode.Off && Mathf.Abs(Input.GetAxis("Size")) > 0.01)
+        if (transformSnapMode == TransformSnapMode.On && Input.GetButtonDown("Size") || transformSnapMode == TransformSnapMode.Off && (Mathf.Abs(Input.GetAxis("Size")) > 0.01|| Mathf.Abs(Input.GetAxis("Mouse ScrollWheel")) > 0.01))
         {
             var scale = carriedObject.transform.localScale;
-            var factor = transformSnapMode == TransformSnapMode.On ? (Input.GetAxis("Size") > 0 ? 1.0f : -1.0f) : Input.GetAxis("Size") * transformSensitivity;
+            var value = Mathf.Abs(Input.GetAxis("Size")) > Mathf.Abs(Input.GetAxis("Mouse ScrollWheel")) ? Input.GetAxis("Size") : Input.GetAxis("Mouse ScrollWheel");
+            var factor = transformSnapMode == TransformSnapMode.On ? (value > 0 ? 1.0f : -1.0f) : value * transformSensitivity;
             if (transformMode == TransformMode.RotateHorizontally)
             {
                 var rotateValue = 45.0f * factor;
