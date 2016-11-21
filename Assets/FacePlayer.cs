@@ -10,6 +10,6 @@ public class FacePlayer : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-        transform.rotation = Quaternion.LookRotation(Camera.main.transform.forward);
+        if (Camera.current!=null) transform.rotation = Quaternion.LookRotation(Camera.current.transform.forward);
 	}
 }

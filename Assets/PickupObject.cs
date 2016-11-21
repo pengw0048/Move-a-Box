@@ -122,8 +122,8 @@ public class PickupObject : MonoBehaviour
         }
         for (int i = 0; i < backPackCapacity; i++) if (Input.GetKeyDown(KeyCode.Alpha1 + i) && backPack[i] != null)
             {
-                if (carrying) PutCarryingIntoBackPack();
-                TakeOutFromBackPack(i);
+                if (carrying) SwitchCarriedWithBackPack(i);
+                else TakeOutFromBackPack(i);
                 UpdateModeText();
             }
     }
@@ -150,6 +150,16 @@ public class PickupObject : MonoBehaviour
             ShowBackPackItem();
             carriedObject.transform.position = Camera.main.transform.position + Camera.main.transform.forward * holdDistance;
         }
+    }
+    void SwitchCarriedWithBackPack(int i)
+    {
+        var tempObject = backPack[i];
+        tempObject.SetActive(true);
+        carriedObject.SetActive(false);
+        backPack[i] = carriedObject;
+        carriedObject = tempObject;
+        carriedObject.transform.position = Camera.main.transform.position + Camera.main.transform.forward * holdDistance;
+        ShowBackPackItem();
     }
     void PickupAnObject()
     {
