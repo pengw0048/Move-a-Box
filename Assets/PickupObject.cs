@@ -63,8 +63,10 @@ public class PickupObject : MonoBehaviour
         while (true)
         {
             if (transformMode == TransformMode.Off) break;
-            if ((transformMode == TransformMode.RotateHorizontally || transformMode == TransformMode.RotateVertically) && carriedObject.GetComponent<Pickupable>().canRotate) break;
-            if ((transformMode == TransformMode.Scale || transformMode == TransformMode.ScaleX || transformMode == TransformMode.ScaleY || transformMode == TransformMode.ScaleZ) && carriedObject.GetComponent<Pickupable>().canScale) break;
+            if (transformMode == TransformMode.RotateHorizontally && carriedObject.GetComponent<Pickupable>().canRotateHorizontally) break;
+            if (transformMode == TransformMode.RotateVertically && carriedObject.GetComponent<Pickupable>().canRotateVertically) break;
+            if (transformMode == TransformMode.Scale && carriedObject.GetComponent<Pickupable>().canScale) break;
+            if ((transformMode == TransformMode.ScaleX || transformMode == TransformMode.ScaleY || transformMode == TransformMode.ScaleZ) && carriedObject.GetComponent<Pickupable>().canScaleXYZ) break;
             transformMode = transformMode.Next();
         }
     }
