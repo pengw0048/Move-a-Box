@@ -60,7 +60,7 @@ public class PickupObject : MonoBehaviour
 
     void JumpToNextLegalTransformMode()
     {
-        if (carriedObject.transform.parent != null)
+        if (carriedObject.GetComponent<GroupHolder>() != null)
         {
             transformMode = TransformMode.Off;
             return;
@@ -154,6 +154,7 @@ public class PickupObject : MonoBehaviour
             carriedObject.SetActive(true);
             ShowBackPackItem();
             carriedObject.transform.position = Camera.main.transform.position + Camera.main.transform.forward * holdDistance;
+            if (carriedObject.gameObject.GetComponent<GroupHolder>() != null) { positionSnapMode = PositionSnapMode.Off; UpdateModeText(); }
         }
     }
     void SwitchCarriedWithBackPack(int i)
@@ -173,6 +174,7 @@ public class PickupObject : MonoBehaviour
         if (Physics.Raycast(ray, out hit, maxDistance))
         {
             var p = hit.collider.GetComponent<Pickupable>();
+            if (p!=null && p.gameObject.transform.parent != null) p = p.gameObject.transform.parent.GetComponent<Pickupable>();
             var g = hit.collider.GetComponent<ResourceGenerator>();
             if (p != null) carriedObject = p.gameObject;
             if (g != null)
@@ -184,28 +186,37 @@ public class PickupObject : MonoBehaviour
             if (p != null || g != null)
             {
                 carrying = true;
-                carriedObject.GetComponent<Rigidbody>().isKinematic = true;
-                carriedObject.GetComponent<Collider>().isTrigger = true;
+                if (carriedObject.GetComponent<Rigidbody>() != null) carriedObject.GetComponent<Rigidbody>().isKinematic = true;
+                if (carriedObject.GetComponent<Collider>() != null) carriedObject.GetComponent<Collider>().isTrigger = true;
+                if (carriedObject.gameObject.GetComponent<GroupHolder>() != null) { positionSnapMode = PositionSnapMode.Off; UpdateModeText(); }
             }
         }
     }
     void PutDownCarryingObject()
     {
         carrying = false;
-        carriedObject.gameObject.GetComponent<Rigidbody>().isKinematic = false;
-        carriedObject.gameObject.GetComponent<Collider>().isTrigger = false;
+        if (carriedObject.GetComponent<Rigidbody>() != null) carriedObject.GetComponent<Rigidbody>().isKinematic = false;
+        if (carriedObject.GetComponent<Collider>() != null) carriedObject.GetComponent<Collider>().isTrigger = false;
         PositionSnap(carriedObject);
     }
     void PoseCarryingObject()
     {
         var pos = Vector3.Lerp(carriedObject.transform.position, Camera.main.transform.position + Camera.main.transform.forward * holdDistance, Time.deltaTime * smooth);
-        carriedObject.transform.position = pos;
-        var bound = carriedObject.GetComponent<Renderer>().bounds;
-        if (bound.min.y < 0.1)
+        if (carriedObject.GetComponent<GroupHolder>() == null)
         {
-            pos.y += (float)(0.1 - bound.min.y);
-            carriedObject.transform.position = pos;
+            var bound = carriedObject.GetComponent<Renderer>().bounds;
+            if (bound.min.y < 0.1) pos.y += 0.1f - bound.min.y;
+        }else
+        {
+            var miny = float.MaxValue;
+            foreach (Transform obj in carriedObject.transform)
+            {
+                miny = Mathf.Min(miny, obj.gameObject.GetComponent<Renderer>().bounds.min.y);
+                if (miny < 0.1) pos.y += 0.1f - miny;
+            }
         }
+        carriedObject.transform.position = pos;
+        
     }
     void PositionSnap(GameObject obj)
     {

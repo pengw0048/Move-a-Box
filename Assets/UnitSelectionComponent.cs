@@ -150,6 +150,7 @@ public class UnitSelectionComponent : MonoBehaviour
             {
                 obj.transform.SetParent(groupHolder.transform);
             }
+            groupHolder.GetComponent<Pickupable>().displayName = "Group of " + rawObjects.Count;
         }
         if (Input.GetButtonDown("Cancel"))
         {
