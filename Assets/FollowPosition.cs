@@ -4,6 +4,10 @@ using System.Collections;
 public class FollowPosition : MonoBehaviour {
     public GameObject following;
 	void Update () {
-        if (following != null) transform.position = following.transform.position;
+        if (following != null) Set();
+    }
+    public void Set()
+    {
+        transform.position = following.transform.position;
     }
 }

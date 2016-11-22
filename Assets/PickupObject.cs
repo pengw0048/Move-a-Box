@@ -60,6 +60,11 @@ public class PickupObject : MonoBehaviour
 
     void JumpToNextLegalTransformMode()
     {
+        if (carriedObject.transform.parent != null)
+        {
+            transformMode = TransformMode.Off;
+            return;
+        }
         while (true)
         {
             if (transformMode == TransformMode.Off) break;

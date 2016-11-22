@@ -7,6 +7,7 @@ using System.Text;
 
 public class UnitSelectionComponent : MonoBehaviour
 {
+    public GameObject groupHolderPrefab;
     bool isSelecting = false;
     Vector3 mousePosition1;
 
@@ -39,7 +40,7 @@ public class UnitSelectionComponent : MonoBehaviour
             var selectedObjects = new List<SelectableUnitComponent>();
             foreach (var selectableObject in FindObjectsOfType<SelectableUnitComponent>())
             {
-                if (IsWithinSelectionBounds(selectableObject.gameObject))
+                if (IsWithinSelectionBounds(selectableObject.gameObject) && selectableObject.gameObject.transform.parent == null)
                 {
                     selectedObjects.Add(selectableObject);
                 }
@@ -53,15 +54,35 @@ public class UnitSelectionComponent : MonoBehaviour
         {
             foreach (var selectableObject in FindObjectsOfType<SelectableUnitComponent>())
             {
-                if (IsWithinSelectionBounds(selectableObject.gameObject))
+                if (IsWithinSelectionBounds(selectableObject.gameObject) && selectableObject.gameObject.transform.parent == null)
                 {
                     if (selectableObject.selectionCircle == null)
                     {
                         selectableObject.selectionCircle = Instantiate(selectionCirclePrefab);
-                        selectableObject.selectionCircle.GetComponent<FollowPosition>().following = selectableObject.gameObject;
                         selectableObject.selectionCircle.transform.eulerAngles = new Vector3(90, 0, 0);
-                        var extends = selectableObject.GetComponent<Renderer>().bounds.extents;
-                        selectableObject.selectionCircle.GetComponent<Projector>().orthographicSize = Mathf.Max(extends.x, extends.z)* 1.5f;
+                        selectableObject.selectionCircle.GetComponent<FollowPosition>().following = selectableObject.gameObject;
+                        selectableObject.selectionCircle.GetComponent<FollowPosition>().Set();
+                        if (selectableObject.gameObject.GetComponent<GroupHolder>() == null)
+                        {
+                            var extends = selectableObject.GetComponent<Renderer>().bounds.extents;
+                            extends.y = 0f;
+                            selectableObject.selectionCircle.GetComponent<Projector>().orthographicSize = extends.magnitude *1.2f;
+                        }
+                        else
+                        {
+                            var min = new Vector3(float.MaxValue, 0f, float.MaxValue);
+                            var max = -min;
+                            foreach (Transform obj in selectableObject.transform)
+                            {
+                                if (obj.gameObject.GetComponent<Renderer>() == null) continue;
+                                var bound = obj.gameObject.GetComponent<Renderer>().bounds;
+                                min.x = Mathf.Min(bound.min.x, min.x);
+                                min.z = Mathf.Min(bound.min.z, min.z);
+                                max.x = Mathf.Max(bound.max.x, max.x);
+                                max.z = Mathf.Max(bound.max.z, max.z);
+                            }
+                            selectableObject.selectionCircle.GetComponent<Projector>().orthographicSize = (max - min).magnitude * 0.6f;
+                        }
                     }
                 }
                 else
@@ -74,6 +95,84 @@ public class UnitSelectionComponent : MonoBehaviour
                 }
             }
         }
+
+        if (Input.GetButtonDown("Submit"))
+        {
+            var selectedObjects = new List<SelectableUnitComponent>();
+            foreach (var selectableObject in FindObjectsOfType<SelectableUnitComponent>())
+            {
+                if (selectableObject.selectionCircle != null)
+                {
+                    selectedObjects.Add(selectableObject);
+                    Destroy(selectableObject.selectionCircle.gameObject);
+                    selectableObject.selectionCircle = null;
+                }
+            }
+            if (selectedObjects.Count < 2) return;
+            var rawObjects = new List<GameObject>();
+            foreach (var obj in selectedObjects)
+            {
+                if (obj.gameObject.GetComponent<GroupHolder>() != null)
+                {
+                    var children = new List<GameObject>();
+                    foreach (Transform item in obj.gameObject.GetComponent<GroupHolder>().transform)
+                    {
+                        children.Add(item.gameObject);
+                    }
+                    foreach(var item in children) {
+                        item.gameObject.transform.SetParent(null, true);
+                        if (item.gameObject.GetComponent<FixedJoint>() != null) Destroy(item.gameObject.GetComponent<FixedJoint>());
+                        rawObjects.Add(item.gameObject);
+                    }
+                    Destroy(obj.gameObject);
+                }
+                else rawObjects.Add(obj.gameObject);
+            }
+            var groupHolder = Instantiate(groupHolderPrefab);
+            var min = new Vector3(float.MaxValue, 0f, float.MaxValue);
+            var max = -min;
+            foreach (GameObject obj in rawObjects)
+            {
+                if (obj.GetComponent<Renderer>() == null) continue;
+                var bound = obj.GetComponent<Renderer>().bounds;
+                min.x = Mathf.Min(bound.min.x, min.x);
+                min.z = Mathf.Min(bound.min.z, min.z);
+                max.x = Mathf.Max(bound.max.x, max.x);
+                max.z = Mathf.Max(bound.max.z, max.z);
+            }
+            groupHolder.transform.position = (max + min) / 2;
+            foreach (GameObject obj in rawObjects)
+            {
+                var rigidBody = obj.AddComponent<FixedJoint>();
+                rigidBody.connectedBody = groupHolder.GetComponent<Rigidbody>();
+            }
+            foreach (var obj in rawObjects)
+            {
+                obj.transform.SetParent(groupHolder.transform);
+            }
+        }
+        if (Input.GetButtonDown("Cancel"))
+        {
+            foreach (var obj in FindObjectsOfType<SelectableUnitComponent>())
+            {
+                if (obj.selectionCircle != null && obj.gameObject.GetComponent<GroupHolder>() != null)
+                {
+                    Destroy(obj.selectionCircle);
+                    var children = new List<GameObject>();
+                    foreach (Transform item in obj.gameObject.GetComponent<GroupHolder>().transform)
+                    {
+                        children.Add(item.gameObject);
+                    }
+                    foreach (var item in children)
+                    {
+                        item.gameObject.transform.SetParent(null, true);
+                        if (item.gameObject.GetComponent<FixedJoint>() != null) Destroy(item.gameObject.GetComponent<FixedJoint>());
+                    }
+                    Destroy(obj.gameObject);
+                }
+            }
+        }
+
     }
 
     public bool IsWithinSelectionBounds(GameObject gameObject)
