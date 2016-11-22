@@ -3,7 +3,9 @@ using System.Collections;
 
 public class BirdViewCameraController : MonoBehaviour {
     public float moveSpeed = 5.0f;
-	void Start () {
+    public float mouseSensitivity = 5.0f;
+
+    void Start () {
 	
 	}
 	

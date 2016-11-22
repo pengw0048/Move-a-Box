@@ -7,7 +7,7 @@ public class PickupObject : MonoBehaviour
 {
     public float maxDistance;
 
-    bool carrying;
+    public bool carrying;
     GameObject carriedObject;
     GameObject[] backPack;
     public Text[] backPackText;

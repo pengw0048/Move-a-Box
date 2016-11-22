@@ -15,7 +15,7 @@ public class GameController : MonoBehaviour {
 	void Update () {
 	    if (Input.GetButtonDown("SwitchCamera"))
         {
-            SwitchCamera();
+            if (!player.GetComponent<PickupObject>().carrying) SwitchCamera();
         }
 	}
     void SwitchCamera()
@@ -25,17 +25,21 @@ public class GameController : MonoBehaviour {
             playerCamera.enabled = false;
             birdViewCamera.enabled = true;
             birdViewCamera.transform.position = new Vector3(player.transform.position.x, birdViewCamera.transform.position.y, player.transform.position.z);
+            birdViewCamera.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             player.SetActive(false);
             birdViewCamera.GetComponent<BirdViewCameraController>().enabled = true;
             playerViewCanvas.enabled = false;
+            Cursor.lockState = CursorLockMode.None;
         }
         else
         {
+            birdViewCamera.GetComponent<UnitSelectionComponent>().RemoveAllSelection();
             birdViewCamera.enabled = false;
             birdViewCamera.GetComponent<BirdViewCameraController>().enabled = false;
             playerCamera.enabled = true;
             player.SetActive(true);
             playerViewCanvas.enabled = true;
+            Cursor.lockState = CursorLockMode.Locked;
         }
         playerView = !playerView;
     }
