@@ -22,17 +22,22 @@ public class PauseMenu : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetButtonDown("Pause") && Camera.main != null && !pickupScript.carrying)
+        if (Input.GetButtonDown("Pause") && Camera.main != null)
         {
             paused = !paused;
             if (paused)
             {
+                pickupScript.enabled = false;
                 Time.timeScale = 0f;
                 pauseMenuCanvas.GetComponent<Canvas>().enabled = true;
                 mainPanel.SetActive(true);
                 filePanel.SetActive(false);
                 cameraController.enabled = false;
                 Cursor.lockState = CursorLockMode.None;
+                foreach (Transform child in mainPanel.transform)
+                {
+                    if (child.gameObject.name.Contains("Save") || child.gameObject.name.Contains("Load")) child.GetComponent<Button>().interactable = !pickupScript.carrying;
+                }
             }
             else
             {
@@ -43,6 +48,7 @@ public class PauseMenu : MonoBehaviour
 
     public void Resume()
     {
+        pickupScript.enabled = true;
         Time.timeScale = 1f;
         pauseMenuCanvas.GetComponent<Canvas>().enabled = false;
         cameraController.enabled = true;
