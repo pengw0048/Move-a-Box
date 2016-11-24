@@ -6,7 +6,7 @@ public class ResourceGenerator : MonoBehaviour {
     public int amount;
     public bool removeIfNone;
     public TextMesh remainCount;
-    int remain;
+    public int remain;
     public GameObject generatedObject;
     void Start()
     {
