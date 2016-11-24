@@ -77,13 +77,15 @@ public class PauseMenu : MonoBehaviour
         }
         else
         {
-            var savedList = SaveLoadHelper.Load(fileName);
             var objList = FindObjectsOfType<GameObject>()
                 .Where(o => (o.GetComponent<Pickupable>() != null || o.GetComponent<ResourceGenerator>() != null) && o.transform.parent == null).ToList();
             objList.ForEach(o => Destroy(o));
+            var savedList = SaveLoadHelper.Load(fileName);
+            var objDict = new Dictionary<int, GameObject>();
             foreach (var item in savedList)
             {
                 var obj = Instantiate(Resources.Load(item.prefab)) as GameObject;
+                objDict.Add(item.index, obj);
                 foreach (var component in item.components)
                 {
                     if (component == "Transform")
@@ -96,6 +98,18 @@ public class PauseMenu : MonoBehaviour
                     {
                         var gen = obj.GetComponent<ResourceGenerator>();
                         gen.remain = int.Parse(item.values["Remain"]);
+                    }
+                    else if (component == "GroupHolder")
+                    {
+                        var tokens = item.values["Children"].Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var index in tokens)
+                        {
+                            var child = objDict[int.Parse(index)];
+                            var rigidBody = child.AddComponent<FixedJoint>();
+                            rigidBody.connectedBody = obj.GetComponent<Rigidbody>();
+                            child.transform.SetParent(obj.transform);
+                        }
+                        obj.GetComponent<Pickupable>().displayName = "Group of " + obj.transform.childCount;
                     }
                 }
             }
