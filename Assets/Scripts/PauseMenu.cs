@@ -91,7 +91,7 @@ public class PauseMenu : MonoBehaviour
             var objDict = new Dictionary<int, GameObject>();
             foreach (var item in savedList)
             {
-                var obj = Instantiate(Resources.Load(item.prefab)) as GameObject;
+                var obj = Instantiate(Resources.Load(System.IO.Path.Combine("Prefabs", item.prefab))) as GameObject;
                 objDict.Add(item.index, obj);
                 foreach (var component in item.components)
                 {
