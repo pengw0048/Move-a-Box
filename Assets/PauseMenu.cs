@@ -7,6 +7,7 @@ public class PauseMenu : MonoBehaviour
 {
     public GameObject pauseMenuCanvas;
     public CameraController cameraController;
+    public PickupObject pickupScript;
     public GameObject mainPanel;
     public GameObject filePanel;
     public GameObject buttonPrefab;
@@ -21,7 +22,7 @@ public class PauseMenu : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetButtonDown("Pause") && Camera.main != null)
+        if (Input.GetButtonDown("Pause") && Camera.main != null && !pickupScript.carrying)
         {
             paused = !paused;
             if (paused)
