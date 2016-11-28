@@ -34,5 +34,11 @@ public class CameraController : MonoBehaviour
         var speed = new Vector3(xSpeed, zSpeed, ySpeed);
         speed = transform.rotation * speed;
         cc.Move(speed * Time.deltaTime);
+
+        if (transform.position.y < -5)
+        {
+            transform.position = new Vector3(0, 20, 0);
+            transform.rotation = Quaternion.Euler(0, 0, 0);
+        }
     }
 }
