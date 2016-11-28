@@ -108,7 +108,7 @@ public class UnitSelectionComponent : MonoBehaviour
                     selectableObject.selectionCircle = null;
                 }
             }
-            if (selectedObjects.Count < 2) return;
+            if (selectedObjects.Count < 1 || selectedObjects.Count == 1 && selectedObjects[0].gameObject.GetComponent<GroupHolder>() == null) return;
             var rawObjects = new List<GameObject>();
             foreach (var obj in selectedObjects)
             {
@@ -128,29 +128,32 @@ public class UnitSelectionComponent : MonoBehaviour
                 }
                 else rawObjects.Add(obj.gameObject);
             }
-            var groupHolder = Instantiate(groupHolderPrefab);
-            var min = new Vector3(float.MaxValue, 0f, float.MaxValue);
-            var max = -min;
-            foreach (GameObject obj in rawObjects)
+            if (selectedObjects.Count > 1)
             {
-                if (obj.GetComponent<Renderer>() == null) continue;
-                var bound = obj.GetComponent<Renderer>().bounds;
-                min.x = Mathf.Min(bound.min.x, min.x);
-                min.z = Mathf.Min(bound.min.z, min.z);
-                max.x = Mathf.Max(bound.max.x, max.x);
-                max.z = Mathf.Max(bound.max.z, max.z);
+                var groupHolder = Instantiate(groupHolderPrefab);
+                var min = new Vector3(float.MaxValue, 0f, float.MaxValue);
+                var max = -min;
+                foreach (GameObject obj in rawObjects)
+                {
+                    if (obj.GetComponent<Renderer>() == null) continue;
+                    var bound = obj.GetComponent<Renderer>().bounds;
+                    min.x = Mathf.Min(bound.min.x, min.x);
+                    min.z = Mathf.Min(bound.min.z, min.z);
+                    max.x = Mathf.Max(bound.max.x, max.x);
+                    max.z = Mathf.Max(bound.max.z, max.z);
+                }
+                groupHolder.transform.position = (max + min) / 2;
+                foreach (GameObject obj in rawObjects)
+                {
+                    var rigidBody = obj.AddComponent<FixedJoint>();
+                    rigidBody.connectedBody = groupHolder.GetComponent<Rigidbody>();
+                }
+                foreach (var obj in rawObjects)
+                {
+                    obj.transform.SetParent(groupHolder.transform);
+                }
+                groupHolder.GetComponent<Pickupable>().displayName = "Group of " + rawObjects.Count;
             }
-            groupHolder.transform.position = (max + min) / 2;
-            foreach (GameObject obj in rawObjects)
-            {
-                var rigidBody = obj.AddComponent<FixedJoint>();
-                rigidBody.connectedBody = groupHolder.GetComponent<Rigidbody>();
-            }
-            foreach (var obj in rawObjects)
-            {
-                obj.transform.SetParent(groupHolder.transform);
-            }
-            groupHolder.GetComponent<Pickupable>().displayName = "Group of " + rawObjects.Count;
         }
         if (Input.GetButtonDown("Cancel"))
         {
