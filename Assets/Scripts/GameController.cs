@@ -10,6 +10,8 @@ public class GameController : MonoBehaviour {
 	void Start () {
         playerView = true;
         birdViewCamera.GetComponent<BirdViewCameraController>().enabled = false;
+        Object.FindObjectOfType<CameraController>().enabled = false;
+        Time.timeScale = 0.0f;
 	}
 	
 	void Update () {

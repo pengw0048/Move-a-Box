@@ -10,11 +10,6 @@ public class CameraController : MonoBehaviour
     public float yRange = 60.0f;
     float zSpeed = 0;
 
-    void Start()
-    {
-        Cursor.lockState = CursorLockMode.Locked;
-    }
-
     void Update()
     {
         var cc = GetComponent<CharacterController>();
