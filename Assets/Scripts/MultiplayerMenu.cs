@@ -2,6 +2,7 @@
 using UnityEngine.UI;
 using System.Collections;
 using System.Threading;
+using System;
 
 public class MultiplayerMenu : MonoBehaviour {
     string defaultLabel, defaultStart;
@@ -11,7 +12,7 @@ public class MultiplayerMenu : MonoBehaviour {
     Text label, connectionList;
     void Start()
     {
-        net = Object.FindObjectOfType<NetworkLayer>();
+        net = UnityEngine.Object.FindObjectOfType<NetworkLayer>();
         hostButton = gameObject.transform.FindChild("Host Button").GetComponent<Button>();
         connectButton = gameObject.transform.FindChild("Connect Button").GetComponent<Button>();
         startButton = gameObject.transform.FindChild("Start Button").GetComponent<Button>();
@@ -25,6 +26,8 @@ public class MultiplayerMenu : MonoBehaviour {
     }
     public void Back()
     {
+        label.text = defaultLabel;
+        startButton.gameObject.transform.GetComponentInChildren<Text>().text = defaultStart;
         this.gameObject.transform.parent.FindChild("Start Up Dialog").gameObject.SetActive(true);
         this.gameObject.SetActive(false);
     }
@@ -46,17 +49,9 @@ public class MultiplayerMenu : MonoBehaviour {
         addressInput.interactable = false;
         backButton.interactable = false;
         startButton.gameObject.transform.GetComponentInChildren<Text>().text = "Wait for server to start...";
-        var ret = net.Connect(addressInput.text);
-        if (ret != null)
-        {
-            label.text = ret.ToString();
-            hostButton.interactable = true;
-            connectButton.interactable = true;
-            addressInput.interactable = true;
-            backButton.interactable = true;
-            startButton.gameObject.transform.GetComponentInChildren<Text>().text = defaultStart;
-        }
-        StartCoroutine(RefreshList());
+        var ret = net.Connect(addressInput.text, this);
+        if (ret != null) fail(ret);
+        else StartCoroutine(RefreshList());
     }
     public void StartGame()
     {
@@ -69,5 +64,14 @@ public class MultiplayerMenu : MonoBehaviour {
             connectionList.text = "Connected hosts:\r\n" + net.GetClientList();
             yield return new WaitForSecondsRealtime(0.4f);
         }
+    }
+    public void fail(Exception ex)
+    {
+        label.text = ex.Message;
+        hostButton.interactable = true;
+        connectButton.interactable = true;
+        addressInput.interactable = true;
+        backButton.interactable = true;
+        startButton.gameObject.transform.GetComponentInChildren<Text>().text = defaultStart;
     }
 }

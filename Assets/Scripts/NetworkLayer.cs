@@ -14,6 +14,7 @@ public class NetworkLayer : MonoBehaviour {
     TcpClient tcpclient;
     Thread serveTcpThread, epochThread, clientThread;
     bool inGame, isServer;
+    MultiplayerMenu menu;
     class Client
     {
         public TcpClient conn;
@@ -38,8 +39,9 @@ public class NetworkLayer : MonoBehaviour {
         epochThread = new Thread(new ThreadStart(Epoch));
         epochThread.Start();
     }
-    public Exception Connect(string hostport)
+    public Exception Connect(string hostport, MultiplayerMenu menu)
     {
+        this.menu = menu;
         try
         {
             tcpclient = new TcpClient();
@@ -132,7 +134,7 @@ public class NetworkLayer : MonoBehaviour {
                 Debug.Log(line);
                 Thread.Sleep(500);
             }
-            catch (Exception ex) { Debug.Log(ex); return; }
+            catch (Exception ex) { menu.fail(ex); Debug.Log(ex); return; }
         }
     }
     public string GetIPString()
