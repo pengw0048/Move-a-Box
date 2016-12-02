@@ -11,7 +11,7 @@ public class GameController : MonoBehaviour {
         playerView = true;
         birdViewCamera.GetComponent<BirdViewCameraController>().enabled = false;
         Object.FindObjectOfType<CameraController>().enabled = false;
-        Time.timeScale = 0.0f;
+        //Time.timeScale = 0.0f;
 	}
 	
 	void Update () {
