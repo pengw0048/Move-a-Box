@@ -56,11 +56,16 @@ public class MultiplayerMenu : MonoBehaviour {
     }
     public void StartGame()
     {
-        net.StartGame();
+        StartCoroutine(CallStartGame());
         this.gameObject.SetActive(false);
         Time.timeScale = 1.0f;
         Cursor.lockState = CursorLockMode.Locked;
         UnityEngine.Object.FindObjectOfType<CameraController>().enabled = true;
+    }
+    IEnumerator CallStartGame()
+    {
+        net.StartGame();
+        yield return null;
     }
     IEnumerator RefreshList()
     {

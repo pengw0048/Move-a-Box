@@ -57,6 +57,7 @@ public class PauseMenu : MonoBehaviour
 
     public void Quit()
     {
+        Object.FindObjectOfType<NetworkLayer>().Stop();
         Application.Quit();
     }
 

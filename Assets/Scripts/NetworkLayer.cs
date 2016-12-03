@@ -9,7 +9,8 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
 
-public class NetworkLayer : MonoBehaviour {
+public class NetworkLayer : MonoBehaviour
+{
     int myPort;
     TcpListener listener;
     TcpClient tcpclient;
@@ -18,6 +19,7 @@ public class NetworkLayer : MonoBehaviour {
     MultiplayerMenu menu;
     Process netmanProcess;
     public GameController controller;
+    public int myid;
     class Client
     {
         public TcpClient conn;
@@ -48,6 +50,7 @@ public class NetworkLayer : MonoBehaviour {
     public Exception Connect(string hostport, MultiplayerMenu menu)
     {
         this.menu = menu;
+        if (!hostport.Contains(":")) hostport = "127.0.0.1:" + hostport;
         try
         {
             tcpclient = new TcpClient();
@@ -68,8 +71,10 @@ public class NetworkLayer : MonoBehaviour {
         var hostport = clients.Keys.Select(hp => ExtractHost(hp) + ":" + UnityEngine.Random.Range(10000, 60000)).ToArray();
         lock (this)
         {
-            controller.InitPlayers(clients.Count);
-            var posstr = string.Join(" ", controller.players.Select(p => p.transform.position.Serialize()).ToArray());
+            controller.InitTransform(clients.Count);
+            controller.initPlayersInt = true;
+            controller.initInt = clients.Count;
+            var posstr = string.Join(" ", controller.position.Values.Select(p => p.Serialize()).ToArray());
             var cmd = "Start " + string.Join(" ", hostport);
             var id = 0;
             foreach (var client in clients.Values)
@@ -108,7 +113,7 @@ public class NetworkLayer : MonoBehaviour {
         netmanProcess = Process.Start(start);
         netmanThread = new Thread(new ThreadStart(ReadNetman));
         netmanThread.Start();
-        lock(netmanThread) Monitor.Wait(netmanThread);
+        lock (netmanThread) Monitor.Wait(netmanThread);
     }
     void ReadNetman()
     {
@@ -119,7 +124,27 @@ public class NetworkLayer : MonoBehaviour {
             var line = sr.ReadLine();
             UnityEngine.Debug.Log(line);
             var tokens = line.Split(' ');
-            if (tokens[0] == "Ready") lock(netmanThread) Monitor.Pulse(netmanThread);
+            try
+            {
+                if (tokens[0] == "Ready") lock (netmanThread) Monitor.Pulse(netmanThread);
+                else if (tokens[0] == "Msg")
+                {
+                    if (tokens[1] == "Position")
+                    {
+                        var id = int.Parse(tokens[2]);
+                        if (id == myid) continue;
+                        var pos = tokens[3].DeserializeVector3();
+                        pos.y -= 1.0f;
+                        var rot = tokens[4].DeserializeVector3();
+                        lock (controller.position)
+                        {
+                            controller.position[id] = pos;
+                            controller.rotation[id] = rot;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) { UnityEngine.Debug.Log(ex); }
         }
     }
     void ListenTCP()
@@ -195,25 +220,27 @@ public class NetworkLayer : MonoBehaviour {
                 sw.WriteLine("Ping");
                 sw.Flush();
                 var line = sr.ReadLine().Split(' ');
-                if (line[0] == "List" || line[0]=="Start")
+                if (line[0] == "List" || line[0] == "Start")
                 {
                     clients.Clear();
                     lock (this)
                         for (int i = 1; i < line.Length; i++)
-                            if(line[i].Contains(":"))
+                            if (line[i].Contains(":"))
                                 clients.Add(line[i], null);
                 }
-                if(line[0]=="Start")
+                if (line[0] == "Start")
                 {
-                    var myid = int.Parse(line[line.Length - 1]);
+                    myid = int.Parse(line[line.Length - 1]);
                     var posstr = sr.ReadLine();
-                    controller.InitPlayers(posstr, myid);
+                    UnityEngine.Debug.Log(posstr);
+                    controller.initInt = myid;
+                    controller.initString = posstr;
+                    controller.initPlayersString = true;
                     SetupNetman(clients.Keys.ToArray(), myid);
                     inGame = true;
                     menu.triggerStart = true; ;
                     return;
                 }
-                UnityEngine.Debug.Log(line);
                 Thread.Sleep(500);
             }
             catch (Exception ex) { menu.fail(ex); UnityEngine.Debug.Log(ex); return; }
@@ -244,5 +271,21 @@ public class NetworkLayer : MonoBehaviour {
     {
         lock (this)
             return string.Join("\r\n", clients.Keys.ToArray());
+    }
+    public void Broadcast(string msg)
+    {
+        if (netmanProcess != null)
+            lock (netmanProcess.StandardInput)
+            {
+                netmanProcess.StandardInput.WriteLine("Broadcast");
+                netmanProcess.StandardInput.WriteLine();
+                netmanProcess.StandardInput.WriteLine(msg);
+                netmanProcess.StandardInput.Flush();
+            }
+    }
+    public void Stop()
+    {
+        try { netmanThread.Abort(); } catch (Exception) { }
+        try { netmanProcess.Kill(); } catch (Exception) { }
     }
 }
