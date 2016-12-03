@@ -17,6 +17,7 @@ public class NetworkLayer : MonoBehaviour {
     public bool inGame, isServer;
     MultiplayerMenu menu;
     Process netmanProcess;
+    public GameController controller;
     class Client
     {
         public TcpClient conn;
@@ -29,7 +30,8 @@ public class NetworkLayer : MonoBehaviour {
     Dictionary<string, Client> clients = new Dictionary<string, Client>();
     void Start()
     {
-        myPort = UnityEngine.Random.Range(10000, 65535);
+        controller = UnityEngine.Object.FindObjectOfType<GameController>();
+        myPort = UnityEngine.Random.Range(10000, 60000);
     }
     public void Host()
     {
@@ -63,21 +65,24 @@ public class NetworkLayer : MonoBehaviour {
             epochThread.Abort();
         }
         catch (Exception ex) { UnityEngine.Debug.Log(ex); }
-        var hostport = clients.Keys.Select(hp => ExtractHost(hp) + ":" + UnityEngine.Random.Range(10000, 65535)).ToArray();
+        var hostport = clients.Keys.Select(hp => ExtractHost(hp) + ":" + UnityEngine.Random.Range(10000, 60000)).ToArray();
         lock (this)
         {
+            controller.InitPlayers(clients.Count);
+            var posstr = string.Join(" ", controller.players.Select(p => p.transform.position.Serialize()).ToArray());
             var cmd = "Start " + string.Join(" ", hostport);
             var id = 0;
             foreach (var client in clients.Values)
             {
-                if(client.conn!=null)
-                try
-                {
-                    client.thread.Abort();
-                    client.sw.WriteLine(cmd + " " + id);
-                    client.sw.Flush();
-                }
-                catch (Exception ex) { UnityEngine.Debug.Log(ex); }
+                if (client.conn != null)
+                    try
+                    {
+                        client.thread.Abort();
+                        client.sw.WriteLine(cmd + " " + id);
+                        client.sw.WriteLine(posstr);
+                        client.sw.Flush();
+                    }
+                    catch (Exception ex) { UnityEngine.Debug.Log(ex); }
                 id++;
             }
         }
@@ -200,7 +205,10 @@ public class NetworkLayer : MonoBehaviour {
                 }
                 if(line[0]=="Start")
                 {
-                    SetupNetman(clients.Keys.ToArray(), int.Parse(line[line.Length - 1]));
+                    var myid = int.Parse(line[line.Length - 1]);
+                    var posstr = sr.ReadLine();
+                    controller.InitPlayers(posstr, myid);
+                    SetupNetman(clients.Keys.ToArray(), myid);
                     inGame = true;
                     menu.triggerStart = true; ;
                     return;

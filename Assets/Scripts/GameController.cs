@@ -1,11 +1,14 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class GameController : MonoBehaviour {
     public GameObject player;
     public Camera playerCamera;
     public Camera birdViewCamera;
     public Canvas playerViewCanvas;
+    public List<GameObject> players = new List<GameObject>();
+    public float mapSizeX = 10.0f, mapSizeZ = 10.0f;
     bool playerView;
 	void Start () {
         playerView = true;
@@ -42,5 +45,35 @@ public class GameController : MonoBehaviour {
             Cursor.lockState = CursorLockMode.Locked;
         }
         playerView = !playerView;
+    }
+    public void InitPlayers(int count)
+    {
+        var prefab = Resources.Load(System.IO.Path.Combine("Prefabs", "Player"));
+        var holder = GameObject.Find("Remote Players");
+        players.Add(player);
+        for (int i = 1; i < count; i++)
+        {
+            var aplayer = Instantiate(prefab) as GameObject;
+            aplayer.transform.SetParent(holder.transform);
+            aplayer.transform.position = new Vector3(Random.Range(-mapSizeX, mapSizeX), aplayer.transform.position.y, Random.Range(-mapSizeZ, mapSizeZ));
+            players.Add(aplayer);
+        }
+    }
+    public void InitPlayers(string posstr, int myid)
+    {
+        var prefab = Resources.Load(System.IO.Path.Combine("Prefabs", "Player"));
+        var holder = GameObject.Find("Remote Players");
+        var poss = posstr.Split(' ');
+        for(int i = 0; i < poss.Length; i++)
+        {
+            var aplayer = player;
+            if (i != myid)
+            {
+                aplayer = Instantiate(prefab) as GameObject;
+                aplayer.transform.SetParent(holder.transform);
+            }
+            aplayer.transform.position = poss[i].DeserializeVector3();
+            players.Add(aplayer);
+        }
     }
 }

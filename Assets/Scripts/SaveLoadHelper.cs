@@ -65,12 +65,12 @@ public static class Extensions
 {
     public static string Serialize(this Vector3 vec)
     {
-        return vec.x + " " + vec.y + " " + vec.z;
+        return vec.x + "," + vec.y + "," + vec.z;
     }
     public static Vector3 DeserializeVector3(this string str)
     {
         var vec = new Vector3();
-        var tokens = str.Split(' ');
+        var tokens = str.Split(',');
         vec.x = float.Parse(tokens[0]);
         vec.y = float.Parse(tokens[1]);
         vec.z = float.Parse(tokens[2]);
