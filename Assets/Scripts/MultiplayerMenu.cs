@@ -10,6 +10,7 @@ public class MultiplayerMenu : MonoBehaviour {
     Button hostButton, connectButton, startButton, backButton;
     InputField addressInput;
     Text label, connectionList;
+    public bool triggerStart;
     void Start()
     {
         net = UnityEngine.Object.FindObjectOfType<NetworkLayer>();
@@ -55,11 +56,15 @@ public class MultiplayerMenu : MonoBehaviour {
     }
     public void StartGame()
     {
-
+        net.StartGame();
+        this.gameObject.SetActive(false);
+        Time.timeScale = 1.0f;
+        Cursor.lockState = CursorLockMode.Locked;
+        UnityEngine.Object.FindObjectOfType<CameraController>().enabled = true;
     }
     IEnumerator RefreshList()
     {
-        while (true)
+        while (!net.inGame)
         {
             connectionList.text = "Connected hosts:\r\n" + net.GetClientList();
             yield return new WaitForSecondsRealtime(0.4f);
@@ -73,5 +78,20 @@ public class MultiplayerMenu : MonoBehaviour {
         addressInput.interactable = true;
         backButton.interactable = true;
         startButton.gameObject.transform.GetComponentInChildren<Text>().text = defaultStart;
+    }
+    void Update()
+    {
+        if (triggerStart)
+        {
+            triggerStart = false;
+            ClientStart();
+        }
+    }
+    void ClientStart()
+    {
+        this.gameObject.SetActive(false);
+        Time.timeScale = 1.0f;
+        Cursor.lockState = CursorLockMode.Locked;
+        UnityEngine.Object.FindObjectOfType<CameraController>().enabled = true;
     }
 }

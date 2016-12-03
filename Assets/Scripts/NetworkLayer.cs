@@ -7,20 +7,24 @@ using System.Threading;
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 public class NetworkLayer : MonoBehaviour {
     int myPort;
     TcpListener listener;
     TcpClient tcpclient;
-    Thread serveTcpThread, epochThread, clientThread;
-    bool inGame, isServer;
+    Thread serveTcpThread, epochThread, clientThread, netmanThread;
+    public bool inGame, isServer;
     MultiplayerMenu menu;
+    Process netmanProcess;
     class Client
     {
         public TcpClient conn;
         public DateTime lastmsg;
         public Thread thread;
         public string addr;
+        public StreamReader sr;
+        public StreamWriter sw;
     }
     Dictionary<string, Client> clients = new Dictionary<string, Client>();
     void Start()
@@ -47,10 +51,71 @@ public class NetworkLayer : MonoBehaviour {
             tcpclient = new TcpClient();
             tcpclient.Connect(hostport.Split(':')[0], int.Parse(hostport.Split(':')[1]));
         }
-        catch (Exception ex) { Debug.Log(ex); return ex; }
+        catch (Exception ex) { UnityEngine.Debug.Log(ex); return ex; }
         clientThread = new Thread(new ThreadStart(HeartBeat));
         clientThread.Start();
         return null;
+    }
+    public void StartGame()
+    {
+        try
+        {
+            epochThread.Abort();
+        }
+        catch (Exception ex) { UnityEngine.Debug.Log(ex); }
+        var hostport = clients.Keys.Select(hp => ExtractHost(hp) + ":" + UnityEngine.Random.Range(10000, 65535)).ToArray();
+        lock (this)
+        {
+            var cmd = "Start " + string.Join(" ", hostport);
+            var id = 0;
+            foreach (var client in clients.Values)
+            {
+                if(client.conn!=null)
+                try
+                {
+                    client.thread.Abort();
+                    client.sw.WriteLine(cmd + " " + id);
+                    client.sw.Flush();
+                }
+                catch (Exception ex) { UnityEngine.Debug.Log(ex); }
+                id++;
+            }
+        }
+        SetupNetman(hostport, 0);
+        foreach (var client in clients.Values)
+        {
+            try
+            {
+                if (client.conn != null) client.conn.Close();
+            }
+            catch (Exception) { }
+        }
+        inGame = true;
+    }
+    void SetupNetman(string[] hostport, int id)
+    {
+        var start = new ProcessStartInfo();
+        start.FileName = IsLinux() ? "netman" : "Z:\\netman.exe";
+        start.UseShellExecute = false;
+        start.RedirectStandardInput = true;
+        start.RedirectStandardOutput = true;
+        start.Arguments = string.Format("-N={0} -id={1} -port={2} -hostports={3} -retries=100", hostport.Length, id, ExtractPort(hostport[id]), string.Join(",", hostport));
+        netmanProcess = Process.Start(start);
+        netmanThread = new Thread(new ThreadStart(ReadNetman));
+        netmanThread.Start();
+        lock(netmanThread) Monitor.Wait(netmanThread);
+    }
+    void ReadNetman()
+    {
+        var sr = netmanProcess.StandardOutput;
+        var sw = netmanProcess.StandardInput;
+        while (true)
+        {
+            var line = sr.ReadLine();
+            UnityEngine.Debug.Log(line);
+            var tokens = line.Split(' ');
+            if (tokens[0] == "Ready") lock(netmanThread) Monitor.Pulse(netmanThread);
+        }
     }
     void ListenTCP()
     {
@@ -62,33 +127,34 @@ public class NetworkLayer : MonoBehaviour {
                 lock (this)
                 {
                     var myip = client.Client.RemoteEndPoint.ToString();
-                    if (myip == "127.0.0.1") myip = Dns.GetHostAddresses(Dns.GetHostName()).Select(ip => ip.ToString()).Where(ip => !ip.Contains(":")).First();
+                    if (myip.StartsWith("127.0.0.1"))
+                        myip = myip.Replace("127.0.0.1", Dns.GetHostAddresses(Dns.GetHostName()).Select(ip => ip.ToString()).Where(ip => !ip.Contains(":")).First());
                     var entry = new Client() { conn = client, lastmsg = DateTime.Now, addr = myip };
                     entry.thread = new Thread(new ParameterizedThreadStart(ServeTCP));
                     entry.thread.Start(entry);
-                    clients.Add(client.Client.RemoteEndPoint.ToString(), entry);
+                    clients.Add(myip, entry);
                 }
             }
-            catch (Exception ex) { Debug.Log(ex); return; }
+            catch (Exception ex) { UnityEngine.Debug.Log(ex); return; }
         }
     }
     void ServeTCP(object obj)
     {
         var client = obj as Client;
         var ns = client.conn.GetStream();
-        var sr = new StreamReader(ns);
-        var sw = new StreamWriter(ns);
+        client.sr = new StreamReader(ns);
+        client.sw = new StreamWriter(ns);
         while (true)
         {
             try
             {
-                var line = sr.ReadLine();
+                var line = client.sr.ReadLine();
                 if (line.StartsWith("Ping")) client.lastmsg = DateTime.Now;
                 lock (this)
-                    sw.WriteLine("List " + string.Join(" ", clients.Keys.ToArray()));
-                sw.Flush();
+                    client.sw.WriteLine("List " + string.Join(" ", clients.Keys.ToArray()));
+                client.sw.Flush();
             }
-            catch (Exception ex) { Debug.Log(ex); return; }
+            catch (Exception ex) { UnityEngine.Debug.Log(ex); return; }
         }
     }
     void Epoch()
@@ -124,18 +190,43 @@ public class NetworkLayer : MonoBehaviour {
                 sw.WriteLine("Ping");
                 sw.Flush();
                 var line = sr.ReadLine().Split(' ');
-                if (line[0] == "List")
+                if (line[0] == "List" || line[0]=="Start")
                 {
                     clients.Clear();
                     lock (this)
                         for (int i = 1; i < line.Length; i++)
-                            clients.Add(line[i], null);
+                            if(line[i].Contains(":"))
+                                clients.Add(line[i], null);
                 }
-                Debug.Log(line);
+                if(line[0]=="Start")
+                {
+                    SetupNetman(clients.Keys.ToArray(), int.Parse(line[line.Length - 1]));
+                    inGame = true;
+                    menu.triggerStart = true; ;
+                    return;
+                }
+                UnityEngine.Debug.Log(line);
                 Thread.Sleep(500);
             }
-            catch (Exception ex) { menu.fail(ex); Debug.Log(ex); return; }
+            catch (Exception ex) { menu.fail(ex); UnityEngine.Debug.Log(ex); return; }
         }
+    }
+    bool IsLinux()
+    {
+        int p = (int)Environment.OSVersion.Platform;
+        return (p == 4) || (p == 6) || (p == 128);
+    }
+    string ExtractPort(string hostport)
+    {
+        var tokens = hostport.Split(':');
+        if (tokens.Length < 2) return "";
+        return tokens[1];
+    }
+    string ExtractHost(string hostport)
+    {
+        var tokens = hostport.Split(':');
+        if (tokens.Length < 2) return "";
+        return tokens[0];
     }
     public string GetIPString()
     {
@@ -143,7 +234,6 @@ public class NetworkLayer : MonoBehaviour {
     }
     public string GetClientList()
     {
-        Debug.Log(clients.Keys.ToArray());
         lock (this)
             return string.Join("\r\n", clients.Keys.ToArray());
     }
