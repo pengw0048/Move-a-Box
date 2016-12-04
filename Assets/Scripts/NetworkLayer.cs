@@ -20,6 +20,7 @@ public class NetworkLayer : MonoBehaviour
     Process netmanProcess;
     public GameController controller;
     public int myid;
+    string myIp;
     class Client
     {
         public TcpClient conn;
@@ -32,14 +33,17 @@ public class NetworkLayer : MonoBehaviour
     Dictionary<string, Client> clients = new Dictionary<string, Client>();
     void Start()
     {
+        if (IsLinux())
+            using (var wc = new WebClient())
+                myIp = wc.DownloadString("http://api.ipify.org/");
+        else myIp = Dns.GetHostAddresses(Dns.GetHostName()).Select(ip => ip.ToString()).Where(ip => !ip.Contains(":")).First();
         controller = UnityEngine.Object.FindObjectOfType<GameController>();
         myPort = UnityEngine.Random.Range(10000, 60000);
     }
     public void Host()
     {
         controller.isMultiplayer = true;
-        var myip = Dns.GetHostAddresses(Dns.GetHostName()).Select(ip => ip.ToString()).Where(ip => !ip.Contains(":")).First();
-        clients.Add(myip + ":" + myPort, new Client() { addr = myip });
+        clients.Add(myIp + ":" + myPort, new Client() { addr = myIp });
         isServer = true;
         listener = new TcpListener(IPAddress.Any, myPort);
         listener.Start();
@@ -107,7 +111,7 @@ public class NetworkLayer : MonoBehaviour
     void SetupNetman(string[] hostport, int id)
     {
         var start = new ProcessStartInfo();
-        start.FileName = IsLinux() ? "netman" : "Z:\\netman.exe";
+        start.FileName = IsLinux() ? "netman" : "netman.exe";
         start.UseShellExecute = false;
         start.RedirectStandardInput = true;
         start.RedirectStandardOutput = true;
@@ -125,7 +129,6 @@ public class NetworkLayer : MonoBehaviour
         while (true)
         {
             var line = sr.ReadLine();
-            //UnityEngine.Debug.Log(line);
             var tokens = line.Split(' ');
             try
             {
@@ -154,7 +157,7 @@ public class NetworkLayer : MonoBehaviour
                         lock (controller.takereq)
                             controller.takereq.Add(new GameController.TakeOneRequest() { gid = gid, oid = oid, pid = pid });
                     }
-                    else if(tokens[1] == "Object")
+                    else if (tokens[1] == "Object")
                     {
                         var pid = int.Parse(tokens[2]);
                         var oid = int.Parse(tokens[3]);
@@ -170,7 +173,7 @@ public class NetworkLayer : MonoBehaviour
                         lock (controller.putreq)
                             controller.putreq.Add(oid);
                     }
-                    else if(tokens[1] == "Pickup")
+                    else if (tokens[1] == "Pickup")
                     {
                         var pid = int.Parse(tokens[2]);
                         var oid = int.Parse(tokens[3]);
@@ -202,13 +205,13 @@ public class NetworkLayer : MonoBehaviour
                 var client = listener.AcceptTcpClient();
                 lock (this)
                 {
-                    var myip = client.Client.RemoteEndPoint.ToString();
-                    if (myip.StartsWith("127.0.0.1"))
-                        myip = myip.Replace("127.0.0.1", Dns.GetHostAddresses(Dns.GetHostName()).Select(ip => ip.ToString()).Where(ip => !ip.Contains(":")).First());
-                    var entry = new Client() { conn = client, lastmsg = DateTime.Now, addr = myip };
+                    var ip = client.Client.RemoteEndPoint.ToString();
+                    if (ip.StartsWith("127.0.0.1"))
+                        ip = ip.Replace("127.0.0.1", myIp);
+                    var entry = new Client() { conn = client, lastmsg = DateTime.Now, addr = ip };
                     entry.thread = new Thread(new ParameterizedThreadStart(ServeTCP));
                     entry.thread.Start(entry);
-                    clients.Add(myip, entry);
+                    clients.Add(ip, entry);
                 }
             }
             catch (Exception ex) { UnityEngine.Debug.Log(ex); return; }
@@ -278,7 +281,6 @@ public class NetworkLayer : MonoBehaviour
                 {
                     myid = int.Parse(line[line.Length - 1]);
                     var posstr = sr.ReadLine();
-                    UnityEngine.Debug.Log(posstr);
                     controller.initInt = myid;
                     controller.initString = posstr;
                     controller.initPlayersString = true;
@@ -311,7 +313,7 @@ public class NetworkLayer : MonoBehaviour
     }
     public string GetIPString()
     {
-        return string.Join(",", Dns.GetHostAddresses(Dns.GetHostName()).Select(ip => ip.ToString()).Where(ip => !ip.Contains(":")).Select(ip => ip + ":" + myPort).ToArray());
+        return myIp + ":" + myPort;
     }
     public string GetClientList()
     {
@@ -333,7 +335,7 @@ public class NetworkLayer : MonoBehaviour
     object proposeResponseMonitor = new object();
     public bool Propose(string key, string value)
     {
-        if(netmanProcess != null)
+        if (netmanProcess != null)
             lock (netmanProcess.StandardInput)
             {
                 netmanProcess.StandardInput.WriteLine("Propose");

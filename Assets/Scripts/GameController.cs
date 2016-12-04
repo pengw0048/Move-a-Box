@@ -191,7 +191,6 @@ public class GameController : MonoBehaviour {
     {
         var prefab = Resources.Load(System.IO.Path.Combine("Prefabs", "Player"));
         var holder = GameObject.Find("Remote Players");
-        Debug.Log(posstr);
         var poss = posstr.Split(' ');
         for(int i = 0; i < poss.Length; i++)
         {

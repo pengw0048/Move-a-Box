@@ -40,6 +40,11 @@ public class PauseMenu : MonoBehaviour
                 {
                     if (child.gameObject.name.Contains("Save") || child.gameObject.name.Contains("Load")) child.GetComponent<Button>().interactable = !pickupScript.carrying;
                 }
+                if (controller.isMultiplayer)
+                {
+                    GameObject.Find("Save Button").GetComponent<Button>().interactable = false;
+                    GameObject.Find("Load Button").GetComponent<Button>().interactable = false;
+                }
             }
             else
             {
