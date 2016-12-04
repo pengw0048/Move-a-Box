@@ -21,6 +21,7 @@ public class NetworkLayer : MonoBehaviour
     public GameController controller;
     public int myid;
     string myIp;
+    PopupMessageManager popman;
     class Client
     {
         public TcpClient conn;
@@ -38,6 +39,7 @@ public class NetworkLayer : MonoBehaviour
                 myIp = wc.DownloadString("http://api.ipify.org/");
         else myIp = Dns.GetHostAddresses(Dns.GetHostName()).Select(ip => ip.ToString()).Where(ip => !ip.Contains(":")).First();
         controller = UnityEngine.Object.FindObjectOfType<GameController>();
+        popman = FindObjectOfType<PopupMessageManager>();
         myPort = UnityEngine.Random.Range(10000, 60000);
     }
     public void Host()
@@ -111,7 +113,7 @@ public class NetworkLayer : MonoBehaviour
     void SetupNetman(string[] hostport, int id)
     {
         var start = new ProcessStartInfo();
-        start.FileName = IsLinux() ? "netman" : "netman.exe";
+        start.FileName = IsLinux() ? "netman" : "Z:\\netman.exe";
         start.UseShellExecute = false;
         start.RedirectStandardInput = true;
         start.RedirectStandardOutput = true;
@@ -132,7 +134,11 @@ public class NetworkLayer : MonoBehaviour
             var tokens = line.Split(' ');
             try
             {
-                if (tokens[0] == "Ready") lock (netmanThread) Monitor.Pulse(netmanThread);
+                if (tokens[0] == "Ready")
+                {
+                    lock (netmanThread) Monitor.Pulse(netmanThread);
+                    lock (popman.msgreq) popman.msgreq.Add("Game starts");
+                }
                 else if (tokens[0] == "Msg")
                 {
                     if (tokens[1] == "Position")
@@ -191,6 +197,20 @@ public class NetworkLayer : MonoBehaviour
                 {
                     proposeResponse = tokens[1];
                     lock (proposeResponseMonitor) Monitor.Pulse(proposeResponseMonitor);
+                }
+                else if (tokens[0] == "Lost")
+                {
+                    lock (popman.msgreq) popman.msgreq.Add("Lost connection to " + tokens[1]);
+                }
+                else if (tokens[0] == "#")
+                {
+                    lock (popman.msgreq) popman.msgreq.Add(line.Substring(2));
+                }
+                else if (tokens[0] == "Fatal")
+                {
+                    lock (popman.msgreq) popman.msgreq.Add(line);
+                    sw.WriteLine("Bye");
+                    sw.Flush();
                 }
             }
             catch (Exception ex) { UnityEngine.Debug.Log(ex); }
