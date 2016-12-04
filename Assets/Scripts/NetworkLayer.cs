@@ -154,15 +154,6 @@ public class NetworkLayer : MonoBehaviour
                             controller.rotation[id] = rot;
                         }
                     }
-                    else if (tokens[1] == "TakeOne")
-                    {
-                        var pid = int.Parse(tokens[2]);
-                        var gid = int.Parse(tokens[3]);
-                        var oid = int.Parse(tokens[4]);
-                        if (pid == myid) continue;
-                        lock (controller.takereq)
-                            controller.takereq.Add(new GameController.TakeOneRequest() { gid = gid, oid = oid, pid = pid });
-                    }
                     else if (tokens[1] == "Object")
                     {
                         var pid = int.Parse(tokens[2]);
@@ -178,14 +169,6 @@ public class NetworkLayer : MonoBehaviour
                         if (pid == myid) continue;
                         lock (controller.putreq)
                             controller.putreq.Add(oid);
-                    }
-                    else if (tokens[1] == "Pickup")
-                    {
-                        var pid = int.Parse(tokens[2]);
-                        var oid = int.Parse(tokens[3]);
-                        if (pid == myid) continue;
-                        lock (controller.pickreq)
-                            controller.pickreq.Add(oid);
                     }
                 }
                 else if (tokens[0] == "ProposeError")
@@ -383,6 +366,7 @@ public class NetworkLayer : MonoBehaviour
                 netmanProcess.StandardInput.WriteLine(value);
                 netmanProcess.StandardInput.Flush();
             }
+        else return true;
         lock (proposeResponseMonitor) Monitor.Wait(proposeResponseMonitor);
         return value == proposeResponse;
     }
