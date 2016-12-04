@@ -115,6 +115,7 @@ public class GameController : MonoBehaviour {
                         {
                             if (item.gameObject.GetComponent<Rigidbody>() != null) item.gameObject.GetComponent<Rigidbody>().isKinematic = false;
                             if (item.gameObject.GetComponent<Collider>() != null) item.gameObject.GetComponent<Collider>().isTrigger = false;
+                            item.owner = -1;
                         }
                 }
                 putreq.Clear();

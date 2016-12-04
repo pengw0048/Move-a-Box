@@ -9,4 +9,5 @@ public class Pickupable : MonoBehaviour
     public bool canScale;
     public bool canScaleXYZ;
     public int id;
+    public int owner = -1;
 }

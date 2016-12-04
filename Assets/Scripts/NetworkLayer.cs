@@ -195,7 +195,7 @@ public class NetworkLayer : MonoBehaviour
                 }
                 else if (tokens[0] == "ProposeOK")
                 {
-                    proposeResponse = tokens[1];
+                    proposeResponse = line.Substring(line.IndexOf(' ') + 1);
                     lock (proposeResponseMonitor) Monitor.Pulse(proposeResponseMonitor);
                 }
                 else if (tokens[0] == "Lost")
@@ -211,6 +211,17 @@ public class NetworkLayer : MonoBehaviour
                     lock (popman.msgreq) popman.msgreq.Add(line);
                     sw.WriteLine("Bye");
                     sw.Flush();
+                }
+                else if (tokens[0] == "Paxos")
+                {
+                    if (tokens[2] == "Pickup")
+                    {
+                        var pid = int.Parse(tokens[3]);
+                        var oid = int.Parse(tokens[4]);
+                        if (pid == myid) continue;
+                        lock (controller.pickreq)
+                            controller.pickreq.Add(oid);
+                    }
                 }
             }
             catch (Exception ex) { UnityEngine.Debug.Log(ex); }

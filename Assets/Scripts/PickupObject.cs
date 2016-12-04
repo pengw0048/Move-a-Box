@@ -187,10 +187,12 @@ public class PickupObject : MonoBehaviour
             var p = hit.collider.GetComponent<Pickupable>();
             if (p!=null && p.gameObject.transform.parent != null) p = p.gameObject.transform.parent.GetComponent<Pickupable>();
             var g = hit.collider.GetComponent<ResourceGenerator>();
-            if (p != null)
+            if (p != null && p.owner == -1)
             {
+                var ret = net.Propose("p" + p.id, string.Format("Pickup {0} {1}", net.myid, p.id));
+                if (!ret) return;
                 carriedObject = p.gameObject;
-                net.Broadcast(string.Format("Pickup {0} {1}", net.myid, p.id));
+                p.owner = net.myid;
             }
             if (g != null)
             {
@@ -202,10 +204,11 @@ public class PickupObject : MonoBehaviour
                     int id;
                     id = nextid++;
                     carriedObject.GetComponent<Pickupable>().id = id;
+                    carriedObject.GetComponent<Pickupable>().owner = net.myid;
                     net.Broadcast(string.Format("TakeOne {0} {1} {2}", net.myid, g.id, id));
                 }
             }
-            if (p != null || g != null)
+            if (p != null && p.owner == net.myid || g != null)
             {
                 carrying = true;
                 if (carriedObject.GetComponent<Rigidbody>() != null) carriedObject.GetComponent<Rigidbody>().isKinematic = true;
@@ -219,6 +222,7 @@ public class PickupObject : MonoBehaviour
         carrying = false;
         if (carriedObject.GetComponent<Rigidbody>() != null) carriedObject.GetComponent<Rigidbody>().isKinematic = false;
         if (carriedObject.GetComponent<Collider>() != null) carriedObject.GetComponent<Collider>().isTrigger = false;
+        carriedObject.GetComponent<Pickupable>().owner = -1;
         PositionSnap(carriedObject);
         net.Broadcast(string.Format("PutDown {0} {1}", net.myid, carriedObject.GetComponent<Pickupable>().id));
     }
