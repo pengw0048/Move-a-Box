@@ -62,8 +62,8 @@ public class GameController : MonoBehaviour {
                 {
                     if (id != net.myid)
                     {
-                        players[id].transform.position = position[id];
-                        players[id].transform.rotation = Quaternion.Euler(rotation[id]);
+                        players[id].transform.position = Vector3.Lerp(players[id].transform.position, position[id], 10.0f * Time.deltaTime);
+                        players[id].transform.rotation = Quaternion.Euler(Vector3.Lerp(players[id].transform.rotation.eulerAngles, rotation[id], 50.0f * Time.deltaTime));
                     }
                 }
             if (net.inGame) player.GetComponentInChildren<Rigidbody>().useGravity = true;
