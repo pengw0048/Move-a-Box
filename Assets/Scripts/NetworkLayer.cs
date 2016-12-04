@@ -222,6 +222,15 @@ public class NetworkLayer : MonoBehaviour
                         lock (controller.pickreq)
                             controller.pickreq.Add(oid);
                     }
+                    else if (tokens[2] == "TakeOne")
+                    {
+                        var pid = int.Parse(tokens[3]);
+                        var gid = int.Parse(tokens[4]);
+                        var oid = int.Parse(tokens[5]);
+                        if (pid == myid) continue;
+                        lock (controller.takereq)
+                            controller.takereq.Add(new GameController.TakeOneRequest() { gid = gid, oid = oid, pid = pid });
+                    }
                 }
             }
             catch (Exception ex) { UnityEngine.Debug.Log(ex); }

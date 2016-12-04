@@ -189,23 +189,31 @@ public class PickupObject : MonoBehaviour
             var g = hit.collider.GetComponent<ResourceGenerator>();
             if (p != null && p.owner == -1)
             {
-                var ret = net.Propose("p" + p.id, string.Format("Pickup {0} {1}", net.myid, p.id));
-                if (!ret) return;
+                if (controller.isMultiplayer)
+                {
+                    var ret = net.Propose("p" + p.id, string.Format("Pickup {0} {1}", net.myid, p.id));
+                    if (!ret) return;
+                }
                 carriedObject = p.gameObject;
                 p.owner = net.myid;
             }
             if (g != null)
             {
-                if (!g.TakeOne()) return;
+                if (!g.unlimited && g.remain <= 0) return;
+                int id;
+                id = nextid++;
+                if (controller.isMultiplayer)
+                {
+                    var ret = net.Propose("t" + g.id, string.Format("TakeOne {0} {1} {2}", net.myid, g.id, id));
+                    if (!ret) return;
+                }
+                g.TakeOne();
                 carriedObject = Instantiate(g.generatedObject, g.gameObject.transform.position, g.gameObject.transform.rotation) as GameObject;
                 if (g.removeIfNone && g.ShouldDisappear()) Destroy(hit.collider.gameObject);
                 if (controller.isMultiplayer)
                 {
-                    int id;
-                    id = nextid++;
                     carriedObject.GetComponent<Pickupable>().id = id;
                     carriedObject.GetComponent<Pickupable>().owner = net.myid;
-                    net.Broadcast(string.Format("TakeOne {0} {1} {2}", net.myid, g.id, id));
                 }
             }
             if (p != null && p.owner == net.myid || g != null)
