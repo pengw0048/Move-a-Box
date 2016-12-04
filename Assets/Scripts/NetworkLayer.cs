@@ -375,4 +375,8 @@ public class NetworkLayer : MonoBehaviour
         try { netmanThread.Abort(); } catch (Exception) { }
         try { netmanProcess.Kill(); } catch (Exception) { }
     }
+    void OnApplicationQuit()
+    {
+        Stop();
+    }
 }
