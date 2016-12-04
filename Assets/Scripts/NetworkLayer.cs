@@ -37,6 +37,7 @@ public class NetworkLayer : MonoBehaviour
     }
     public void Host()
     {
+        controller.isMultiplayer = true;
         var myip = Dns.GetHostAddresses(Dns.GetHostName()).Select(ip => ip.ToString()).Where(ip => !ip.Contains(":")).First();
         clients.Add(myip + ":" + myPort, new Client() { addr = myip });
         isServer = true;
@@ -49,6 +50,7 @@ public class NetworkLayer : MonoBehaviour
     }
     public Exception Connect(string hostport, MultiplayerMenu menu)
     {
+        controller.isMultiplayer = true;
         this.menu = menu;
         if (!hostport.Contains(":")) hostport = "127.0.0.1:" + hostport;
         try
@@ -110,6 +112,7 @@ public class NetworkLayer : MonoBehaviour
         start.RedirectStandardInput = true;
         start.RedirectStandardOutput = true;
         start.Arguments = string.Format("-N={0} -id={1} -port={2} -hostports={3} -retries=100", hostport.Length, id, ExtractPort(hostport[id]), string.Join(",", hostport));
+        start.CreateNoWindow = true;
         netmanProcess = Process.Start(start);
         netmanThread = new Thread(new ThreadStart(ReadNetman));
         netmanThread.Start();
@@ -122,7 +125,7 @@ public class NetworkLayer : MonoBehaviour
         while (true)
         {
             var line = sr.ReadLine();
-            UnityEngine.Debug.Log(line);
+            //UnityEngine.Debug.Log(line);
             var tokens = line.Split(' ');
             try
             {
@@ -142,6 +145,49 @@ public class NetworkLayer : MonoBehaviour
                             controller.rotation[id] = rot;
                         }
                     }
+                    else if (tokens[1] == "TakeOne")
+                    {
+                        var pid = int.Parse(tokens[2]);
+                        var gid = int.Parse(tokens[3]);
+                        var oid = int.Parse(tokens[4]);
+                        if (pid == myid) continue;
+                        lock (controller.takereq)
+                            controller.takereq.Add(new GameController.TakeOneRequest() { gid = gid, oid = oid, pid = pid });
+                    }
+                    else if(tokens[1] == "Object")
+                    {
+                        var pid = int.Parse(tokens[2]);
+                        var oid = int.Parse(tokens[3]);
+                        if (pid == myid) continue;
+                        lock (controller.movereq)
+                            controller.movereq.Add(new GameController.MoveObjectRequest() { oid = oid, position = tokens[4].DeserializeVector3(), rotation = tokens[5].DeserializeVector3(), scale = tokens[6].DeserializeVector3() });
+                    }
+                    else if (tokens[1] == "PutDown")
+                    {
+                        var pid = int.Parse(tokens[2]);
+                        var oid = int.Parse(tokens[3]);
+                        if (pid == myid) continue;
+                        lock (controller.putreq)
+                            controller.putreq.Add(oid);
+                    }
+                    else if(tokens[1] == "Pickup")
+                    {
+                        var pid = int.Parse(tokens[2]);
+                        var oid = int.Parse(tokens[3]);
+                        if (pid == myid) continue;
+                        lock (controller.pickreq)
+                            controller.pickreq.Add(oid);
+                    }
+                }
+                else if (tokens[0] == "ProposeError")
+                {
+                    proposeResponse = "error";
+                    lock (proposeResponseMonitor) Monitor.Pulse(proposeResponseMonitor);
+                }
+                else if (tokens[0] == "ProposeOK")
+                {
+                    proposeResponse = tokens[1];
+                    lock (proposeResponseMonitor) Monitor.Pulse(proposeResponseMonitor);
                 }
             }
             catch (Exception ex) { UnityEngine.Debug.Log(ex); }
@@ -282,6 +328,21 @@ public class NetworkLayer : MonoBehaviour
                 netmanProcess.StandardInput.WriteLine(msg);
                 netmanProcess.StandardInput.Flush();
             }
+    }
+    string proposeResponse;
+    object proposeResponseMonitor = new object();
+    public bool Propose(string key, string value)
+    {
+        if(netmanProcess != null)
+            lock (netmanProcess.StandardInput)
+            {
+                netmanProcess.StandardInput.WriteLine("Propose");
+                netmanProcess.StandardInput.WriteLine(key);
+                netmanProcess.StandardInput.WriteLine(value);
+                netmanProcess.StandardInput.Flush();
+            }
+        lock (proposeResponseMonitor) Monitor.Wait(proposeResponseMonitor);
+        return value == proposeResponse;
     }
     public void Stop()
     {

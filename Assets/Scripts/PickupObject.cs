@@ -8,7 +8,7 @@ public class PickupObject : MonoBehaviour
     public float maxDistance;
 
     public bool carrying;
-    GameObject carriedObject;
+    public GameObject carriedObject;
     GameObject[] backPack;
     public Text[] backPackText;
     public Canvas canvas;
@@ -30,9 +30,14 @@ public class PickupObject : MonoBehaviour
     public float minScale;
 
     public GameObject player;
+    public int nextid;
+    GameController controller;
+    NetworkLayer net;
 
     void Start()
     {
+        controller = UnityEngine.Object.FindObjectOfType<GameController>();
+        net = UnityEngine.Object.FindObjectOfType<NetworkLayer>();
         UpdateModeText();
         backPack = new GameObject[backPackCapacity];
         backPackText = new Text[backPackCapacity];
@@ -84,6 +89,12 @@ public class PickupObject : MonoBehaviour
             positionSnapMode = positionSnapMode.Next();
             UpdateModeText();
         }
+        if (controller.isMultiplayer && backPackText.Length > 0)
+        {
+            foreach (var item in backPackText)
+                item.gameObject.SetActive(false);
+            backPackText = new Text[0];
+        }
     }
 
     void HandleCarry()
@@ -110,7 +121,7 @@ public class PickupObject : MonoBehaviour
                 PutDownCarryingObject();
                 UpdateModeText();
             }
-            else if (Input.GetButtonDown("Fire2"))
+            else if (Input.GetButtonDown("Fire2") && !controller.isMultiplayer)
             {
                 PutCarryingIntoBackPack();
                 ShowBackPackItem();
@@ -176,12 +187,23 @@ public class PickupObject : MonoBehaviour
             var p = hit.collider.GetComponent<Pickupable>();
             if (p!=null && p.gameObject.transform.parent != null) p = p.gameObject.transform.parent.GetComponent<Pickupable>();
             var g = hit.collider.GetComponent<ResourceGenerator>();
-            if (p != null) carriedObject = p.gameObject;
+            if (p != null)
+            {
+                carriedObject = p.gameObject;
+                net.Broadcast(string.Format("Pickup {0} {1}", net.myid, p.id));
+            }
             if (g != null)
             {
                 if (!g.TakeOne()) return;
                 carriedObject = Instantiate(g.generatedObject, g.gameObject.transform.position, g.gameObject.transform.rotation) as GameObject;
                 if (g.removeIfNone && g.ShouldDisappear()) Destroy(hit.collider.gameObject);
+                if (controller.isMultiplayer)
+                {
+                    int id;
+                    id = nextid++;
+                    carriedObject.GetComponent<Pickupable>().id = id;
+                    net.Broadcast(string.Format("TakeOne {0} {1} {2}", net.myid, g.id, id));
+                }
             }
             if (p != null || g != null)
             {
@@ -198,6 +220,7 @@ public class PickupObject : MonoBehaviour
         if (carriedObject.GetComponent<Rigidbody>() != null) carriedObject.GetComponent<Rigidbody>().isKinematic = false;
         if (carriedObject.GetComponent<Collider>() != null) carriedObject.GetComponent<Collider>().isTrigger = false;
         PositionSnap(carriedObject);
+        net.Broadcast(string.Format("PutDown {0} {1}", net.myid, carriedObject.GetComponent<Pickupable>().id));
     }
     void PoseCarryingObject()
     {
@@ -231,6 +254,7 @@ public class PickupObject : MonoBehaviour
     }
     void ShowBackPackItem()
     {
+        if (controller.isMultiplayer) return;
         for (int i = 0; i < backPackCapacity; i++)
         {
             var str = "Item " + (i + 1) + ": ";

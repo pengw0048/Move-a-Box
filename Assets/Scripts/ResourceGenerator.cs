@@ -8,6 +8,7 @@ public class ResourceGenerator : MonoBehaviour {
     public TextMesh remainCount;
     public int remain;
     public GameObject generatedObject;
+    public int id;
     void Start()
     {
         remain = amount;

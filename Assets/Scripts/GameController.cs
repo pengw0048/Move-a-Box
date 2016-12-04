@@ -13,8 +13,26 @@ public class GameController : MonoBehaviour {
     public Dictionary<int, Vector3> rotation = new Dictionary<int, Vector3>();
     public float mapSizeX = 10.0f, mapSizeZ = 10.0f;
     bool playerView;
+    public bool isMultiplayer;
     NetworkLayer net;
-	void Start () {
+    PickupObject pickup;
+    public class MoveObjectRequest
+    {
+        public Vector3 position, rotation, scale;
+        public int oid;
+    }
+    public List<MoveObjectRequest> movereq = new List<MoveObjectRequest>();
+    public class TakeOneRequest
+    {
+        public int pid, gid, oid;
+    }
+    public List<TakeOneRequest> takereq = new List<TakeOneRequest>();
+    public List<int> putreq = new List<int>();
+    public List<int> pickreq = new List<int>();
+
+
+    void Start () {
+        pickup = FindObjectOfType<PickupObject>();
         net = Object.FindObjectOfType<NetworkLayer>();
         playerView = true;
         birdViewCamera.enabled = false;
@@ -23,30 +41,98 @@ public class GameController : MonoBehaviour {
 	}
 	
 	void Update () {
-        if (initPlayersInt)
-        {
-            initPlayersInt = false;
-            InitPlayers(initInt);
-        }
-        if(initPlayersString)
-        {
-            initPlayersString = false;
-            InitPlayers(initString, initInt);
-        }
-	    if (Input.GetButtonDown("SwitchCamera"))
+        if (!isMultiplayer && Input.GetButtonDown("SwitchCamera"))
         {
             if (!player.GetComponent<PickupObject>().carrying) SwitchCamera();
         }
-        lock(position)
-        foreach (var id in position.Keys)
+        if (isMultiplayer)
         {
-            if (id != net.myid)
+            if (initPlayersInt)
             {
-                players[id].transform.position = position[id];
-                players[id].transform.rotation = Quaternion.Euler(rotation[id]);
+                initPlayersInt = false;
+                InitPlayers(initInt);
+            }
+            if (initPlayersString)
+            {
+                initPlayersString = false;
+                InitPlayers(initString, initInt);
+            }
+            lock (position)
+                foreach (var id in position.Keys)
+                {
+                    if (id != net.myid)
+                    {
+                        players[id].transform.position = position[id];
+                        players[id].transform.rotation = Quaternion.Euler(rotation[id]);
+                    }
+                }
+            if (net.inGame) player.GetComponentInChildren<Rigidbody>().useGravity = true;
+            lock (movereq)
+            {
+                foreach (var req in movereq)
+                {
+                    foreach (var item in FindObjectsOfType<Pickupable>())
+                    {
+                        if (item.id == req.oid)
+                        {
+                            item.transform.position = req.position;
+                            item.transform.rotation = Quaternion.Euler(req.rotation);
+                            item.transform.localScale = req.scale;
+                        }
+                    }
+
+                }
+                movereq.Clear();
+            }
+            lock (takereq)
+            {
+                foreach (var req in takereq)
+                {
+                    foreach (var gen in FindObjectsOfType<ResourceGenerator>())
+                    {
+                        if (gen.id == req.gid)
+                        {
+                            gen.TakeOne();
+                            var obj = Instantiate(gen.generatedObject, gen.gameObject.transform.position, gen.gameObject.transform.rotation) as GameObject;
+                            if (obj.GetComponent<Rigidbody>() != null) obj.GetComponent<Rigidbody>().isKinematic = true;
+                            if (obj.GetComponent<Collider>() != null) obj.GetComponent<Collider>().isTrigger = true;
+                            obj.GetComponent<Pickupable>().id = req.oid;
+                            var nid = FindObjectOfType<PickupObject>().nextid;
+                            FindObjectOfType<PickupObject>().nextid = Mathf.Max(nid, req.oid + 1);
+                            if (gen.removeIfNone && gen.ShouldDisappear()) Destroy(gen.gameObject);
+                        }
+                    }
+
+                }
+                takereq.Clear();
+            }
+            lock (putreq)
+            {
+                foreach (var req in putreq)
+                {
+                    foreach (var item in FindObjectsOfType<Pickupable>())
+                        if (item.id == req)
+                        {
+                            if (item.gameObject.GetComponent<Rigidbody>() != null) item.gameObject.GetComponent<Rigidbody>().isKinematic = false;
+                            if (item.gameObject.GetComponent<Collider>() != null) item.gameObject.GetComponent<Collider>().isTrigger = false;
+                        }
+                }
+                putreq.Clear();
+            }
+            lock (pickreq)
+            {
+                foreach (var req in pickreq)
+                {
+                    foreach (var item in FindObjectsOfType<Pickupable>())
+                        if (item.id == req)
+                        {
+                            if (item.gameObject.GetComponent<Rigidbody>() != null) item.gameObject.GetComponent<Rigidbody>().isKinematic = true;
+                            if (item.gameObject.GetComponent<Collider>() != null) item.gameObject.GetComponent<Collider>().isTrigger = true;
+                        }
+                }
+                pickreq.Clear();
             }
         }
-        if (net.inGame) player.GetComponentInChildren<Rigidbody>().useGravity = true;
 	}
     void SwitchCamera()
     {
@@ -126,6 +212,8 @@ public class GameController : MonoBehaviour {
         while (true)
         {
             net.Broadcast(string.Format("Position {0} {1} {2}", net.myid, player.transform.position.Serialize(), player.transform.rotation.eulerAngles.Serialize()));
+            if (pickup.carrying)
+                net.Broadcast(string.Format("Object {0} {1} {2} {3} {4}", net.myid, pickup.carriedObject.GetComponent<Pickupable>().id, pickup.carriedObject.transform.position.Serialize(), pickup.carriedObject.transform.rotation.eulerAngles.Serialize(), pickup.carriedObject.transform.localScale.Serialize()));
             yield return new WaitForSecondsRealtime(0.1f);
         }
     }

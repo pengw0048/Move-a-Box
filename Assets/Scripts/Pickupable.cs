@@ -8,4 +8,5 @@ public class Pickupable : MonoBehaviour
     public bool canRotateVertically;
     public bool canScale;
     public bool canScaleXYZ;
+    public int id;
 }

@@ -13,9 +13,11 @@ public class PauseMenu : MonoBehaviour
     public GameObject buttonPrefab;
     public GameObject buttonTextPrefab;
     bool paused;
+    GameController controller;
     // Use this for initialization
     void Start()
     {
+        controller = FindObjectOfType<GameController>();
         pauseMenuCanvas.GetComponent<Canvas>().enabled = false;
     }
 
@@ -69,12 +71,14 @@ public class PauseMenu : MonoBehaviour
 
     public void Save()
     {
-        PrepareFileList(true);
+        if (!controller.isMultiplayer)
+            PrepareFileList(true);
     }
 
     public void Load()
     {
-        PrepareFileList(false);
+        if (!controller.isMultiplayer)
+            PrepareFileList(false);
     }
 
     public void DoSaveLoad(string fileName, bool isSave)
