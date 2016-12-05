@@ -393,7 +393,7 @@ public class NetworkLayer : MonoBehaviour
     {
         while (true)
         {
-            yield return new WaitForSecondsRealtime(clients.Count + UnityEngine.Random.Range(0f, 1f));
+            yield return new WaitForSecondsRealtime(clients.Count / 2.0f + UnityEngine.Random.Range(0f, 0.25f));
             if (inGame)
             {
                 var sb = new StringBuilder();
