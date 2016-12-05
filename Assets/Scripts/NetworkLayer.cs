@@ -19,7 +19,7 @@ public class NetworkLayer : MonoBehaviour
     public bool inGame, isServer;
     MultiplayerMenu menu;
     Process netmanProcess;
-    public GameController controller;
+    GameController controller;
     public int myid;
     string myIp;
     PopupMessageManager popman;

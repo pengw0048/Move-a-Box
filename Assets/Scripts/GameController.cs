@@ -11,7 +11,7 @@ public class GameController : MonoBehaviour {
     public List<GameObject> players = new List<GameObject>();
     public Dictionary<int, Vector3> position = new Dictionary<int, Vector3>();
     public Dictionary<int, Vector3> rotation = new Dictionary<int, Vector3>();
-    public float mapSizeX = 10.0f, mapSizeZ = 10.0f;
+    public float mapSizeX1, mapSizeZ1, mapSizeX2, mapSizeZ2;
     bool playerView;
     public bool isMultiplayer;
     NetworkLayer net;
@@ -200,8 +200,8 @@ public class GameController : MonoBehaviour {
         rotation[0] = player.transform.rotation.eulerAngles;
         for(int i = 1; i < count; i++)
         {
-            position[i] = new Vector3(Random.Range(-mapSizeX, mapSizeX), player.transform.position.y, Random.Range(-mapSizeZ, mapSizeZ));
-            rotation[i] = Vector3.zero;
+            position[i] = new Vector3(Random.Range(mapSizeX1, mapSizeX2), player.transform.position.y, Random.Range(mapSizeZ1, mapSizeZ2));
+            rotation[i] = new Vector3(0, Random.Range(-180.0f, 180.0f), 0);
         }
     }
     public void InitPlayers(int count)
