@@ -115,7 +115,7 @@ public class NetworkLayer : MonoBehaviour
     void SetupNetman(string[] hostport, int id)
     {
         var start = new ProcessStartInfo();
-        start.FileName = IsLinux() ? "netman" : "Z:\\netman.exe";
+        start.FileName = IsLinux() ? "netman" : "netman.exe";
         start.UseShellExecute = false;
         start.RedirectStandardInput = true;
         start.RedirectStandardOutput = true;
