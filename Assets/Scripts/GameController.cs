@@ -29,7 +29,7 @@ public class GameController : MonoBehaviour {
     public List<TakeOneRequest> takereq = new List<TakeOneRequest>();
     public List<int> putreq = new List<int>();
     public List<int> pickreq = new List<int>();
-
+    public string syncreq = "";
 
     void Start () {
         pickup = FindObjectOfType<PickupObject>();
@@ -132,6 +132,37 @@ public class GameController : MonoBehaviour {
                         }
                 }
                 pickreq.Clear();
+            }
+            lock (syncreq)
+            {
+                try
+                {
+                    if (syncreq != "")
+                    {
+                        foreach (var sec in syncreq.Split(';'))
+                        {
+                            if (sec == "") continue;
+                            var comp = sec.Split('/');
+                            var id = int.Parse(comp[0]);
+                            var pos = comp[1].DeserializeVector3();
+                            var rot = comp[2].DeserializeVector3();
+                            var v = comp[3].DeserializeVector3();
+                            var w = comp[4].DeserializeVector3();
+                            foreach (var item in FindObjectsOfType<Pickupable>())
+                            {
+                                if (item.id == id)
+                                {
+                                    item.gameObject.transform.position = pos;
+                                    item.gameObject.transform.rotation = Quaternion.Euler(rot);
+                                    item.gameObject.GetComponent<Rigidbody>().velocity = v;
+                                    item.gameObject.GetComponent<Rigidbody>().angularVelocity = w;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (System.Exception ex) { Debug.Log(ex); }
+                    syncreq = "";
             }
         }
 	}

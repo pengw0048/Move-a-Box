@@ -8,13 +8,14 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 
 public class NetworkLayer : MonoBehaviour
 {
     int myPort;
     TcpListener listener;
     TcpClient tcpclient;
-    Thread serveTcpThread, epochThread, clientThread, netmanThread;
+    Thread serveTcpThread, epochThread, clientThread, netmanThread, syncWorldThread;
     public bool inGame, isServer;
     MultiplayerMenu menu;
     Process netmanProcess;
@@ -41,6 +42,7 @@ public class NetworkLayer : MonoBehaviour
         controller = UnityEngine.Object.FindObjectOfType<GameController>();
         popman = FindObjectOfType<PopupMessageManager>();
         myPort = UnityEngine.Random.Range(10000, 60000);
+        StartCoroutine(SyncWorld());
     }
     public void Host()
     {
@@ -197,7 +199,13 @@ public class NetworkLayer : MonoBehaviour
                 }
                 else if (tokens[0] == "Paxos")
                 {
-                    if (tokens[2] == "Pickup")
+                    if (tokens[1] == "sync")
+                    {
+                        var pid = int.Parse(tokens[2]);
+                        if (pid == myid) continue;
+                        lock(controller.syncreq) controller.syncreq = tokens[3];
+                    }
+                    else if (tokens[2] == "Pickup")
                     {
                         var pid = int.Parse(tokens[3]);
                         var oid = int.Parse(tokens[4]);
@@ -309,7 +317,7 @@ public class NetworkLayer : MonoBehaviour
                     controller.initPlayersString = true;
                     SetupNetman(clients.Keys.ToArray(), myid);
                     inGame = true;
-                    menu.triggerStart = true; ;
+                    menu.triggerStart = true;
                     return;
                 }
                 Thread.Sleep(500);
@@ -372,11 +380,31 @@ public class NetworkLayer : MonoBehaviour
     }
     public void Stop()
     {
+        StopAllCoroutines();
         try { netmanThread.Abort(); } catch (Exception) { }
+        try { syncWorldThread.Abort(); } catch (Exception) { }
         try { netmanProcess.Kill(); } catch (Exception) { }
     }
     void OnApplicationQuit()
     {
         Stop();
     }
+    IEnumerator SyncWorld()
+    {
+        while (true)
+        {
+            yield return new WaitForSecondsRealtime(clients.Count + UnityEngine.Random.Range(0f, 1f));
+            if (inGame)
+            {
+                var sb = new StringBuilder();
+                sb.Append(myid + " ");
+                foreach (var item in FindObjectsOfType<Pickupable>())
+                {
+                    sb.AppendFormat("{0}/{1}/{2}/{3}/{4};", item.id, item.gameObject.transform.position.Serialize(), item.gameObject.transform.rotation.eulerAngles.Serialize(), item.gameObject.GetComponent<Rigidbody>().velocity.Serialize(), item.gameObject.GetComponent<Rigidbody>().angularVelocity.Serialize());
+                }
+                Propose("sync", sb.ToString());
+            }
+        }
+    }
+
 }
