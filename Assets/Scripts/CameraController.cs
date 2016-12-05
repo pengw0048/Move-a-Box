@@ -9,6 +9,13 @@ public class CameraController : MonoBehaviour
     float yRotation = 0;
     public float yRange = 60.0f;
     float zSpeed = 0;
+    Vector3 initPos, initRot;
+
+    void Start()
+    {
+        initPos = transform.position;
+        initRot = transform.rotation.eulerAngles;
+    }
 
     void Update()
     {
@@ -32,8 +39,8 @@ public class CameraController : MonoBehaviour
 
         if (transform.position.y < -5)
         {
-            transform.position = new Vector3(0, 20, 0);
-            transform.rotation = Quaternion.Euler(0, 0, 0);
+            transform.position = initPos;
+            transform.rotation = Quaternion.Euler(initRot);
         }
     }
 }
