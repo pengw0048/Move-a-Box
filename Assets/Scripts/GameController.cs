@@ -36,6 +36,7 @@ public class GameController : MonoBehaviour {
     }
     public Dictionary<int, SyncRequest> syncreq = new Dictionary<int, SyncRequest>();
     Dictionary<int, GameObject> objectMap = new Dictionary<int, GameObject>();
+    List<int> removesync = new List<int>();
 
     void Start () {
         pickup = FindObjectOfType<PickupObject>();
@@ -163,14 +164,16 @@ public class GameController : MonoBehaviour {
                                     break;
                                 }
                             }
-                        obj.gameObject.transform.position = req.position;
+                        var oldpos = obj.gameObject.transform.position;
+                        obj.gameObject.transform.position = Vector3.Lerp(obj.gameObject.transform.position, req.position, Time.deltaTime * 10.0f);
                         obj.gameObject.transform.rotation = Quaternion.Euler(req.rotation);
                         obj.gameObject.GetComponent<Rigidbody>().velocity = req.velocity;
                         obj.gameObject.GetComponent<Rigidbody>().angularVelocity = req.angularVelocity;
+                        if ((oldpos - req.position).magnitude < 0.1f) removesync.Add(req.oid);
                     }
                 }
                 catch (System.Exception ex) { Debug.Log(ex); }
-                syncreq.Clear();
+                removesync.ForEach(i => syncreq.Remove(i));
             }
         }
     }
