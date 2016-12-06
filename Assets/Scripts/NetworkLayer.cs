@@ -217,13 +217,7 @@ public class NetworkLayer : MonoBehaviour
                             var w = comp[4].DeserializeVector3();
                             reqs.Add(new GameController.SyncRequest() { angularVelocity = w, oid = id, position = pos, rotation = rot, velocity = v });
                         }
-                        lock (controller.syncreq) reqs.ForEach(r =>
-                        {
-                            if (controller.syncreq.ContainsKey(r.oid))
-                                controller.syncreq[r.oid] = r;
-                            else
-                                controller.syncreq.Add(r.oid, r);
-                        });
+                        lock (controller.syncreq) controller.syncreq.AddRange(reqs);
                     }
                     else if (tokens[2] == "Pickup")
                     {

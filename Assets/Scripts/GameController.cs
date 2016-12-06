@@ -34,9 +34,8 @@ public class GameController : MonoBehaviour {
         public int oid;
         public Vector3 position, rotation, velocity, angularVelocity;
     }
-    public Dictionary<int, SyncRequest> syncreq = new Dictionary<int, SyncRequest>();
+    public List<SyncRequest> syncreq = new List<SyncRequest>();
     Dictionary<int, GameObject> objectMap = new Dictionary<int, GameObject>();
-    List<int> removesync = new List<int>();
 
     void Start () {
         pickup = FindObjectOfType<PickupObject>();
@@ -150,7 +149,7 @@ public class GameController : MonoBehaviour {
             {
                 try
                 {
-                    foreach (var req in syncreq.Values)
+                    foreach (var req in syncreq)
                     {
                         GameObject obj = null;
                         if (objectMap.ContainsKey(req.oid)) obj = objectMap[req.oid];
@@ -164,16 +163,17 @@ public class GameController : MonoBehaviour {
                                     break;
                                 }
                             }
-                        var oldpos = obj.gameObject.transform.position;
-                        obj.gameObject.transform.position = Vector3.Lerp(obj.gameObject.transform.position, req.position, Time.deltaTime * 10.0f);
-                        obj.gameObject.transform.rotation = Quaternion.Euler(req.rotation);
-                        obj.gameObject.GetComponent<Rigidbody>().velocity = req.velocity;
-                        obj.gameObject.GetComponent<Rigidbody>().angularVelocity = req.angularVelocity;
-                        if ((oldpos - req.position).magnitude < 0.1f) removesync.Add(req.oid);
+                        if ((req.position - obj.gameObject.transform.position).magnitude > 0.2f)
+                        {
+                            obj.gameObject.transform.position = req.position;
+                            obj.gameObject.transform.rotation = Quaternion.Euler(req.rotation);
+                            obj.gameObject.GetComponent<Rigidbody>().velocity = req.velocity;
+                            obj.gameObject.GetComponent<Rigidbody>().angularVelocity = req.angularVelocity;
+                        }
                     }
                 }
                 catch (System.Exception ex) { Debug.Log(ex); }
-                removesync.ForEach(i => syncreq.Remove(i));
+                syncreq.Clear();
             }
         }
     }
