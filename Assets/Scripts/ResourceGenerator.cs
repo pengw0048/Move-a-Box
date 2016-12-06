@@ -5,12 +5,13 @@ public class ResourceGenerator : MonoBehaviour {
     public bool unlimited;
     public int amount;
     public bool removeIfNone;
-    public TextMesh remainCount;
+    TextMesh remainCount;
     public int remain;
     public GameObject generatedObject;
     public int id;
     void Start()
     {
+        remainCount = transform.GetComponentInChildren<TextMesh>();
         remain = amount;
         UpdateText();
     }
