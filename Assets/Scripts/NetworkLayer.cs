@@ -415,6 +415,7 @@ public class NetworkLayer : MonoBehaviour
                 sb.Append(myid + " ");
                 foreach (var item in FindObjectsOfType<Pickupable>())
                 {
+                    if (item.gameObject.transform.position.y < -9f) continue;
                     if (round % 10 == 0 || item.gameObject.GetComponent<Rigidbody>().velocity.magnitude > 0.1f)
                         sb.AppendFormat("{0}/{1}/{2}/{3}/{4};", item.id, item.gameObject.transform.position.Serialize(), item.gameObject.transform.rotation.eulerAngles.Serialize(), item.gameObject.GetComponent<Rigidbody>().velocity.Serialize(), item.gameObject.GetComponent<Rigidbody>().angularVelocity.Serialize());
                 }
