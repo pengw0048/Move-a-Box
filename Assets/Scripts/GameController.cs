@@ -29,7 +29,13 @@ public class GameController : MonoBehaviour {
     public List<TakeOneRequest> takereq = new List<TakeOneRequest>();
     public List<int> putreq = new List<int>();
     public List<int> pickreq = new List<int>();
-    public string syncreq = "";
+    public class SyncRequest
+    {
+        public int oid;
+        public Vector3 position, rotation, velocity, angularVelocity;
+    }
+    public Dictionary<int, SyncRequest> syncreq = new Dictionary<int, SyncRequest>();
+    Dictionary<int, GameObject> objectMap = new Dictionary<int, GameObject>();
 
     void Start () {
         pickup = FindObjectOfType<PickupObject>();
@@ -38,9 +44,15 @@ public class GameController : MonoBehaviour {
         birdViewCamera.enabled = false;
         Object.FindObjectOfType<CameraController>().enabled = false;
         //Time.timeScale = 0.0f;
+        var i = 0;
+        foreach (var obj in FindObjectsOfType<Pickupable>())
+        {
+            obj.id = ++i;
+        }
 	}
-	
-	void Update () {
+
+    void Update()
+    {
         if (!isMultiplayer && Input.GetButtonDown("SwitchCamera"))
         {
             if (!player.GetComponent<PickupObject>().carrying) SwitchCamera();
@@ -66,7 +78,7 @@ public class GameController : MonoBehaviour {
                         players[id].transform.rotation = Quaternion.Euler(Vector3.Lerp(players[id].transform.rotation.eulerAngles, rotation[id], 50.0f * Time.deltaTime));
                     }
                 }
-            if (net.inGame) player.GetComponentInChildren<Rigidbody>().useGravity = true;
+            //if (net.inGame) player.GetComponentInChildren<Rigidbody>().useGravity = true;
             lock (movereq)
             {
                 foreach (var req in movereq)
@@ -137,35 +149,31 @@ public class GameController : MonoBehaviour {
             {
                 try
                 {
-                    if (syncreq != "")
+                    foreach (var req in syncreq.Values)
                     {
-                        foreach (var sec in syncreq.Split(';'))
-                        {
-                            if (sec == "") continue;
-                            var comp = sec.Split('/');
-                            var id = int.Parse(comp[0]);
-                            var pos = comp[1].DeserializeVector3();
-                            var rot = comp[2].DeserializeVector3();
-                            var v = comp[3].DeserializeVector3();
-                            var w = comp[4].DeserializeVector3();
+                        GameObject obj = null;
+                        if (objectMap.ContainsKey(req.oid)) obj = objectMap[req.oid];
+                        else
                             foreach (var item in FindObjectsOfType<Pickupable>())
                             {
-                                if (item.id == id)
+                                if (item.id == req.oid)
                                 {
-                                    item.gameObject.transform.position = pos;
-                                    item.gameObject.transform.rotation = Quaternion.Euler(rot);
-                                    item.gameObject.GetComponent<Rigidbody>().velocity = v;
-                                    item.gameObject.GetComponent<Rigidbody>().angularVelocity = w;
+                                    obj = item.gameObject;
+                                    objectMap.Add(req.oid, item.gameObject);
+                                    break;
                                 }
                             }
-                        }
+                        obj.gameObject.transform.position = req.position;
+                        obj.gameObject.transform.rotation = Quaternion.Euler(req.rotation);
+                        obj.gameObject.GetComponent<Rigidbody>().velocity = req.velocity;
+                        obj.gameObject.GetComponent<Rigidbody>().angularVelocity = req.angularVelocity;
                     }
                 }
                 catch (System.Exception ex) { Debug.Log(ex); }
-                    syncreq = "";
+                syncreq.Clear();
             }
         }
-	}
+    }
     void SwitchCamera()
     {
         if (playerView)

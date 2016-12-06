@@ -205,7 +205,19 @@ public class NetworkLayer : MonoBehaviour
                     {
                         var pid = int.Parse(tokens[2]);
                         if (pid == myid) continue;
-                        lock(controller.syncreq) controller.syncreq = tokens[3];
+                        var reqs = new List<GameController.SyncRequest>();
+                        foreach (var sec in tokens[3].Split(';'))
+                        {
+                            if (sec == "") continue;
+                            var comp = sec.Split('/');
+                            var id = int.Parse(comp[0]);
+                            var pos = comp[1].DeserializeVector3();
+                            var rot = comp[2].DeserializeVector3();
+                            var v = comp[3].DeserializeVector3();
+                            var w = comp[4].DeserializeVector3();
+                            reqs.Add(new GameController.SyncRequest() { angularVelocity = w, oid = id, position = pos, rotation = rot, velocity = v });
+                        }
+                        lock (controller.syncreq) reqs.ForEach(r => controller.syncreq.Add(r.oid, r));
                     }
                     else if (tokens[2] == "Pickup")
                     {
@@ -393,19 +405,22 @@ public class NetworkLayer : MonoBehaviour
     }
     IEnumerator SyncWorld()
     {
+        var round = 0;
         while (true)
         {
-            yield return new WaitForSecondsRealtime(clients.Count / 2.0f + UnityEngine.Random.Range(0f, 0.25f));
+            yield return new WaitForSecondsRealtime(clients.Count / 5.0f + UnityEngine.Random.Range(0f, 0.25f));
             if (inGame)
             {
                 var sb = new StringBuilder();
                 sb.Append(myid + " ");
                 foreach (var item in FindObjectsOfType<Pickupable>())
                 {
-                    sb.AppendFormat("{0}/{1}/{2}/{3}/{4};", item.id, item.gameObject.transform.position.Serialize(), item.gameObject.transform.rotation.eulerAngles.Serialize(), item.gameObject.GetComponent<Rigidbody>().velocity.Serialize(), item.gameObject.GetComponent<Rigidbody>().angularVelocity.Serialize());
+                    if (round % 10 == 0 || item.gameObject.GetComponent<Rigidbody>().velocity.magnitude > 0.1f)
+                        sb.AppendFormat("{0}/{1}/{2}/{3}/{4};", item.id, item.gameObject.transform.position.Serialize(), item.gameObject.transform.rotation.eulerAngles.Serialize(), item.gameObject.GetComponent<Rigidbody>().velocity.Serialize(), item.gameObject.GetComponent<Rigidbody>().angularVelocity.Serialize());
                 }
                 Propose("sync", sb.ToString());
             }
+            round = (round + 1) % 10;
         }
     }
 

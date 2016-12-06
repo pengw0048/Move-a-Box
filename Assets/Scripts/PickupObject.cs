@@ -30,7 +30,7 @@ public class PickupObject : MonoBehaviour
     public float minScale;
 
     public GameObject player;
-    public int nextid;
+    public int nextid = 1000;
     GameController controller;
     NetworkLayer net;
 
