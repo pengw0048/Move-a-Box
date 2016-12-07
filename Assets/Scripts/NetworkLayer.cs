@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 using System.Collections;
 using System.Net;
 using System.Net.Sockets;
@@ -114,17 +115,25 @@ public class NetworkLayer : MonoBehaviour
     }
     void SetupNetman(string[] hostport, int id)
     {
+        var consoleonly = GameObject.Find("Console Only Toggle").GetComponent<Toggle>().isOn;
         var start = new ProcessStartInfo();
         start.FileName = IsLinux() ? "netman" : "netman.exe";
-        start.UseShellExecute = false;
-        start.RedirectStandardInput = true;
-        start.RedirectStandardOutput = true;
         start.Arguments = string.Format("-N={0} -id={1} -port={2} -hostports={3} -retries=100", hostport.Length, id, ExtractPort(hostport[id]), string.Join(",", hostport));
-        start.CreateNoWindow = true;
+        if (!consoleonly)
+        {
+            start.UseShellExecute = false;
+            start.RedirectStandardInput = true;
+            start.RedirectStandardOutput = true;
+            start.CreateNoWindow = true;
+        }
         netmanProcess = Process.Start(start);
-        netmanThread = new Thread(new ThreadStart(ReadNetman));
-        netmanThread.Start();
-        lock (netmanThread) Monitor.Wait(netmanThread);
+        if (!consoleonly)
+        {
+            netmanThread = new Thread(new ThreadStart(ReadNetman));
+            netmanThread.Start();
+            lock (netmanThread) Monitor.Wait(netmanThread);
+        }
+        else Process.GetCurrentProcess().Kill();
     }
     void ReadNetman()
     {
