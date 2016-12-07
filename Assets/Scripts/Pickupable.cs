@@ -10,4 +10,8 @@ public class Pickupable : MonoBehaviour
     public bool canScaleXYZ;
     public int id;
     public int owner = -1;
+    void Start()
+    {
+        if (displayName == "") displayName = gameObject.name;
+    }
 }
