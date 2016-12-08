@@ -461,7 +461,8 @@ public class NetworkLayer : MonoBehaviour
             round = (round + 1) % 10;
         }
     }
-	string GetIP()
+    // http://stackoverflow.com/a/27376368
+    string GetIP()
 	{
 		using (var sock = new Socket (AddressFamily.InterNetwork, SocketType.Dgram, 0)) {
 			sock.Connect ("10.0.2.4", 65530);
