@@ -50,7 +50,7 @@ public class MultiplayerMenu : MonoBehaviour {
         addressInput.interactable = false;
         backButton.interactable = false;
         startButton.gameObject.transform.GetComponentInChildren<Text>().text = "Wait for server to start...";
-        var ret = net.Connect(addressInput.text, this);
+        var ret = net.Connect(addressInput.text);
         if (ret != null) fail(ret);
         else StartCoroutine(RefreshList());
     }
