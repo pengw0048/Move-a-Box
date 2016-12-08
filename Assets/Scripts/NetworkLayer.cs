@@ -25,12 +25,13 @@ public class NetworkLayer : MonoBehaviour
     TcpClient tcpclient;  // temp tcp "client"
     Thread serveTcpThread, epochThread, clientThread, netmanThread, syncWorldThread;
     public bool inGame, isServer;
-    MultiplayerMenu menu;
+    public MultiplayerMenu menu;
     Process netmanProcess;
     GameController controller;
     public int myid;  // my nodeid
     string myIp;
     PopupMessageManager popman;
+    public Toggle consoleOnlyToggle;
     class Client  // represents a node in the connection establishment stage
     {
         public TcpClient conn;
@@ -48,7 +49,6 @@ public class NetworkLayer : MonoBehaviour
                 myIp = wc.DownloadString("http://api.ipify.org/");  // there's no easy way in *nux to get an "external" ip, so let's just assume ...
         else myIp = Dns.GetHostAddresses(Dns.GetHostName()).Select(ip => ip.ToString()).Where(ip => !ip.Contains(":")).First();  // for windows
         controller = UnityEngine.Object.FindObjectOfType<GameController>();
-        menu = FindObjectOfType<MultiplayerMenu>();
         popman = FindObjectOfType<PopupMessageManager>();
         myPort = UnityEngine.Random.Range(10000, 60000);
         StartCoroutine(SyncWorld());
@@ -131,11 +131,10 @@ public class NetworkLayer : MonoBehaviour
     // run netman with given params
     void SetupNetman(string[] hostport, int id)
     {
-        var consoleonly = GameObject.Find("Console Only Toggle").GetComponent<Toggle>().isOn;  // for demo only
         var start = new ProcessStartInfo();
-        start.FileName = IsLinux() ? "netman" : "netman.exe";
+        start.FileName = IsLinux() ? "netman" : "Z:\\netman.exe";
         start.Arguments = string.Format("-N={0} -id={1} -port={2} -hostports={3} -retries=100", hostport.Length, id, ExtractPort(hostport[id]), string.Join(",", hostport));
-        if (!consoleonly)
+        if (!consoleOnlyToggle.isOn)
         {
             start.UseShellExecute = false;
             start.RedirectStandardInput = true;
@@ -143,7 +142,7 @@ public class NetworkLayer : MonoBehaviour
             start.CreateNoWindow = true;
         }
         netmanProcess = Process.Start(start);
-        if (!consoleonly)
+        if (!consoleOnlyToggle.isOn)
         {
             netmanThread = new Thread(new ThreadStart(ReadNetman));
             netmanThread.Start();
@@ -351,6 +350,7 @@ public class NetworkLayer : MonoBehaviour
                         for (int i = 1; i < line.Length; i++)
                             if (line[i].Contains(":"))
                                 clients.Add(line[i], null);
+
                 }
                 if (line[0] == "Start")  // got instruction to start, set up netman
                 {
