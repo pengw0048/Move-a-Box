@@ -44,9 +44,8 @@ public class NetworkLayer : MonoBehaviour
     Dictionary<string, Client> clients = new Dictionary<string, Client>();  // maps hostport to client
     void Start()
     {
-        if (IsLinux())
-            using (var wc = new WebClient())
-                myIp = wc.DownloadString("http://api.ipify.org/");  // there's no easy way in *nux to get an "external" ip, so let's just assume ...
+		// there's no easy way in *nux to get an "external" ip, so let's just assume ...
+		if (IsLinux ()) myIp = GetIP();
         else myIp = Dns.GetHostAddresses(Dns.GetHostName()).Select(ip => ip.ToString()).Where(ip => !ip.Contains(":")).First();  // for windows
         controller = UnityEngine.Object.FindObjectOfType<GameController>();
         popman = FindObjectOfType<PopupMessageManager>();
@@ -462,5 +461,12 @@ public class NetworkLayer : MonoBehaviour
             round = (round + 1) % 10;
         }
     }
-
+	string GetIP()
+	{
+		using (var sock = new Socket (AddressFamily.InterNetwork, SocketType.Dgram, 0)) {
+			sock.Connect ("10.0.2.4", 65530);
+			var ep = sock.LocalEndPoint as IPEndPoint;
+			return ep.Address.ToString ();
+		}
+	}
 }
