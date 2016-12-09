@@ -131,7 +131,7 @@ public class NetworkLayer : MonoBehaviour
     void SetupNetman(string[] hostport, int id)
     {
         var start = new ProcessStartInfo();
-        start.FileName = IsLinux() ? "netman" : "Z:\\netman.exe";
+        start.FileName = IsLinux() ? "netman" : "netman.exe";
         start.Arguments = string.Format("-N={0} -id={1} -port={2} -hostports={3} -retries=100", hostport.Length, id, ExtractPort(hostport[id]), string.Join(",", hostport));
         if (!consoleOnlyToggle.isOn)
         {
@@ -249,7 +249,7 @@ public class NetworkLayer : MonoBehaviour
                         var oid = int.Parse(tokens[4]);
                         if (pid == myid) continue;
                         lock (controller.pickreq)
-                            controller.pickreq.Add(oid);
+                            controller.pickreq.Add(new GameController.TakeOneRequest() { pid = pid, oid = oid });
                     }
                     else if (tokens[2] == "TakeOne")  // global agreement to take one object from a resource generator
                     {

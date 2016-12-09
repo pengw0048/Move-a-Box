@@ -38,7 +38,7 @@ public class GameController : MonoBehaviour {
     [HideInInspector] public List<TakeOneRequest> takereq = new List<TakeOneRequest>();
     // requests to put down / pick up items
     [HideInInspector] public List<int> putreq = new List<int>();
-    [HideInInspector] public List<int> pickreq = new List<int>();
+    [HideInInspector] public List<TakeOneRequest> pickreq = new List<TakeOneRequest>();
     // request to sync the world
     public class SyncRequest
     {
@@ -243,10 +243,11 @@ public class GameController : MonoBehaviour {
             foreach (var req in pickreq)
             {
                 foreach (var item in FindObjectsOfType<Pickupable>())
-                    if (item.id == req)
+                    if (item.id == req.oid)
                     {
                         if (item.gameObject.GetComponent<Rigidbody>() != null) item.gameObject.GetComponent<Rigidbody>().isKinematic = true;
                         if (item.gameObject.GetComponent<Collider>() != null) item.gameObject.GetComponent<Collider>().isTrigger = true;
+                        item.owner = req.pid;
                     }
             }
             pickreq.Clear();
