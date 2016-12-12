@@ -46,6 +46,7 @@ public class GameController : MonoBehaviour {
         public Vector3 position, rotation, velocity, angularVelocity;
     }
     [HideInInspector] public List<SyncRequest> syncreq = new List<SyncRequest>();
+    Vector3 lastPos = Vector3.zero, lastRot = Vector3.zero, objPos = Vector3.zero, objRot = Vector3.zero, objScale = Vector3.zero;
 
     // set up object references and init variables
     void Start () {
@@ -149,9 +150,20 @@ public class GameController : MonoBehaviour {
     {
         while (true)
         {
-            net.Broadcast(string.Format("Position {0} {1} {2}", net.myid, player.transform.position.Serialize(), player.transform.rotation.eulerAngles.Serialize()));
+            if ((player.transform.position - lastPos).magnitude > 0.01 || (player.transform.rotation.eulerAngles - lastRot).magnitude > 0.1)
+            {
+                net.Broadcast(string.Format("Position {0} {1} {2}", net.myid, player.transform.position.Serialize(), player.transform.rotation.eulerAngles.Serialize()));
+                lastPos = player.transform.position;
+                lastRot = player.transform.rotation.eulerAngles;
+            }
             if (pickup.carrying)
-                net.Broadcast(string.Format("Object {0} {1} {2} {3} {4}", net.myid, pickup.carriedObject.GetComponent<Pickupable>().id, pickup.carriedObject.transform.position.Serialize(), pickup.carriedObject.transform.rotation.eulerAngles.Serialize(), pickup.carriedObject.transform.localScale.Serialize()));
+                if ((pickup.carriedObject.transform.position - objPos).magnitude > 0.01 || (pickup.carriedObject.transform.rotation.eulerAngles - objRot).magnitude > 0.1 || (pickup.carriedObject.transform.localScale - objScale).magnitude > 0.01)
+                {
+                    net.Broadcast(string.Format("Object {0} {1} {2} {3} {4}", net.myid, pickup.carriedObject.GetComponent<Pickupable>().id, pickup.carriedObject.transform.position.Serialize(), pickup.carriedObject.transform.rotation.eulerAngles.Serialize(), pickup.carriedObject.transform.localScale.Serialize()));
+                    objPos = pickup.carriedObject.transform.position;
+                    objRot = pickup.carriedObject.transform.rotation.eulerAngles;
+                    objScale = pickup.carriedObject.transform.localScale;
+                }
             yield return new WaitForSecondsRealtime(0.1f);
         }
     }
