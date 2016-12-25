@@ -187,6 +187,7 @@ public class PickupObject : MonoBehaviour
             var p = hit.collider.GetComponent<Pickupable>();
             if (p!=null && p.gameObject.transform.parent != null) p = p.gameObject.transform.parent.GetComponent<Pickupable>();
             var g = hit.collider.GetComponent<ResourceGenerator>();
+            if (p != null && p.owner != -1) return;
             if (p != null && p.owner == -1)
             {
                 if (controller.isMultiplayer)

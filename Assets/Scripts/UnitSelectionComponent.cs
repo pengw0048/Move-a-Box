@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿// Modified from http://hyunkell.com/blog/rts-style-unit-selection-in-unity-5/
+// Used in single player mode (bird view) only
+using UnityEngine;
 using System;
 using System.Linq;
 using System.Collections;
